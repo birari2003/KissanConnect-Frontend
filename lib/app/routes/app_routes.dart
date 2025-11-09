@@ -4,9 +4,25 @@ part of 'app_pages.dart';
 abstract class Routes {
   Routes._();
   static const HOME = _Paths.HOME;
+  static const SPLASHSCREEN = _Paths.SPLASHSCREEN;
+  static const SELECTLANGUAGE = _Paths.SELECTLANGUAGE;
+  static const LOGINSIGNUP = _Paths.LOGINSIGNUP;
+  static const FARMERSCREENDASHBOARD = _Paths.FARMERSCREENDASHBOARD;
+  static const ADMINPANEL = _Paths.ADMINPANEL;
+  static const FARMERSLIST = _Paths.FARMERSLIST;
+  static const SUPERADMINLIST = _Paths.SUPERADMINLIST;
+  static const SUPERADMINPANEL = _Paths.SUPERADMINPANEL;
 }
 
 abstract class _Paths {
   _Paths._();
   static const HOME = '/home';
+  static const SPLASHSCREEN = '/splashscreen';
+  static const SELECTLANGUAGE = '/selectlanguage';
+  static const LOGINSIGNUP = '/loginsignup';
+  static const FARMERSCREENDASHBOARD = '/farmerscreendashboard';
+  static const ADMINPANEL = '/adminpanel';
+  static const FARMERSLIST = '/farmerslist';
+  static const SUPERADMINLIST = '/superadminlist';
+  static const SUPERADMINPANEL = '/superadminpanel';
 }

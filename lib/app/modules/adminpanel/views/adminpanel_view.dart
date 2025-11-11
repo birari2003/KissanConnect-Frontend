@@ -7,7 +7,6 @@ import '../../superadminlist/views/superadminlist_view.dart';
 import '../../superadminlist/controllers/superadminlist_controller.dart';
 import '../../../widhets/send_email.dart';
 import '../../../widhets/send_whatsapp_message.dart';
-import '../../../widhets/setting_widget.dart';
 
 class AdminpanelView extends GetView<AdminpanelController> {
   const AdminpanelView({super.key});
@@ -50,8 +49,8 @@ class AdminpanelView extends GetView<AdminpanelController> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF2A6E9B), // Navy Blue
-            Color(0xFF1E5278),
+            Color(0xFF2E7D32), // Green
+             Color(0xFF7BB53B),
           ],
         ),
         boxShadow: [
@@ -70,15 +69,16 @@ class AdminpanelView extends GetView<AdminpanelController> {
             child: Column(
               children: [
                 Container(
-                  padding: EdgeInsets.all(12),
+                  padding: EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(100),
                   ),
-                  child: Icon(
-                    Icons.admin_panel_settings,
-                    size: 48,
-                    color: Color(0xFF7BB53B), // Green
+                  child: Image(
+                    image: AssetImage('assets/images/smartshetkari.png'),
+                    fit: BoxFit.contain,
+                    height: 80,
+                    width: 80,
                   ),
                 ),
                 SizedBox(height: 12),
@@ -92,9 +92,9 @@ class AdminpanelView extends GetView<AdminpanelController> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'KissanConnect',
+                  'Smart Shetkaरी',
                   style: TextStyle(
-                    color: Color(0xFF54B5D9), // Light Blue
+                    color: Color.fromARGB(255, 255, 255, 255), // Light Green
                     fontSize: 14,
                   ),
                 ),
@@ -155,7 +155,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: Color(0xFF7BB53B),
+                  backgroundColor: Color.fromARGB(255, 79, 141, 13),
                   child: Icon(Icons.person, color: Colors.white),
                 ),
                 SizedBox(width: 12),
@@ -248,49 +248,51 @@ class AdminpanelView extends GetView<AdminpanelController> {
   }
 
   Widget _buildContent(BuildContext context) {
-    switch (controller.selectedIndex.value) {
-      case 0:
-        return _buildDashboard(context);
-      case 1:
-        _ensureFarmersListInjected();
-        return _buildPageWithHeader(
-          context,
-          'Farmers',
-          Icons.agriculture_rounded,
-          const FarmerslistView(embedded: true),
-        );
-      case 2:
-        _ensureSuperAdminListInjected();
-        return _buildPageWithHeader(
-          context,
-          'Super Admins',
-          Icons.supervisor_account_rounded,
-          const SuperadminlistView(embedded: true),
-        );
-      case 3:
-        return _buildPageWithHeader(
-          context,
-          'Send Email',
-          Icons.email_rounded,
-          const SendEmailWidget(),
-        );
-      case 4:
-        return _buildPageWithHeader(
-          context,
-          'Send WhatsApp',
-          Icons.chat_rounded,
-          const SendWhatsappWidget(),
-        );
-      case 5:
-        return _buildPageWithHeader(
-          context,
-          'Settings',
-          Icons.settings_rounded,
-          const SettingsWidget(selectedLanguage: 'en-US'),
-        );
-      default:
-        return _buildDashboard(context);
-    }
+    return Obx(() {
+      switch (controller.selectedIndex.value) {
+        case 0:
+          return _buildDashboard(context);
+        case 1:
+          _ensureFarmersListInjected();
+          return _buildPageWithHeader(
+            context,
+            'Farmers',
+            Icons.agriculture_rounded,
+            const FarmerslistView(embedded: true),
+          );
+        case 2:
+          _ensureSuperAdminListInjected();
+          return _buildPageWithHeader(
+            context,
+            'Super Admins',
+            Icons.supervisor_account_rounded,
+            const SuperadminlistView(embedded: true),
+          );
+        case 3:
+          return _buildPageWithHeader(
+            context,
+            'Send Email',
+            Icons.email_rounded,
+            const SendEmailWidget(),
+          );
+        case 4:
+          return _buildPageWithHeader(
+            context,
+            'Send WhatsApp',
+            Icons.chat_rounded,
+            const SendWhatsappWidget(),
+          );
+        case 5:
+          return _buildPageWithHeader(
+            context,
+            'Settings',
+            Icons.settings_rounded,
+            _buildAdminSettings(context),
+          );
+        default:
+          return _buildDashboard(context);
+      }
+    });
   }
 
   void _ensureFarmersListInjected() {
@@ -313,6 +315,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
           // Header with hamburger menu
           Container(
             padding: EdgeInsets.all(24),
+            margin: EdgeInsets.only(top: 10),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -336,21 +339,22 @@ class AdminpanelView extends GetView<AdminpanelController> {
                       child: Icon(
                         Icons.menu,
                         size: 28,
-                        color: Color(0xFF2A6E9B),
+                        color: Color(0xFF2E7D32),
                       ),
                     ),
                   ),
                 ),
                 SizedBox(width: 16),
-                Icon(icon, color: Color(0xFF2A6E9B), size: 28),
+                Icon(icon, color: Color(0xFF2E7D32), size: 28),
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
+                    
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2A6E9B),
+                      color: Color(0xFF2E7D32),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -373,6 +377,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
           // Header
           Container(
             padding: EdgeInsets.all(24),
+            margin: EdgeInsets.only(top: 24),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -396,7 +401,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                       child: Icon(
                         Icons.menu,
                         size: 28,
-                        color: Color(0xFF2A6E9B),
+                        color: Color(0xFF2E7D32),
                       ),
                     ),
                   ),
@@ -411,7 +416,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2A6E9B),
+                          color: Color(0xFF2E7D32),
                         ),
                       ),
                       SizedBox(height: 4),
@@ -459,6 +464,49 @@ class AdminpanelView extends GetView<AdminpanelController> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Statistics Cards Row 1
+                  Text(
+                    'Request Overview',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2E7D32),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildRequestCard(
+                          title: 'Approved',
+                          count: '2,456',
+                          icon: Icons.check_circle,
+                          color: Color(0xFF7BB53B),
+                          compact: true,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildRequestCard(
+                          title: 'Rejected',
+                          count: '123',
+                          icon: Icons.cancel,
+                          color: Colors.red,
+                          compact: true,
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildRequestCard(
+                          title: 'Pending',
+                          count: '28',
+                          icon: Icons.hourglass_empty,
+                          color: Color(0xFFF4B23B),
+                          compact: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24),
                   LayoutBuilder(
                     builder: (context, constraints) {
                       bool isMobile = constraints.maxWidth < 600;
@@ -481,7 +529,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                               title: 'Super Admins',
                               value: '45',
                               icon: Icons.supervisor_account_rounded,
-                              color: Color(0xFF2A6E9B),
+                              color: Color(0xFF2E7D32),
                               trend: '+3',
                               trendUp: true,
                             ),
@@ -527,7 +575,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                                     title: 'Super Admins',
                                     value: '45',
                                     icon: Icons.supervisor_account_rounded,
-                                    color: Color(0xFF2A6E9B),
+                                    color: Color(0xFF2E7D32),
                                     trend: '+3',
                                     trendUp: true,
                                   ),
@@ -553,7 +601,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                                     title: 'Approved Today',
                                     value: '156',
                                     icon: Icons.check_circle_rounded,
-                                    color: Color(0xFF54B5D9),
+                                    color: Color(0xFF66BB6A),
                                     trend: '+18%',
                                     trendUp: true,
                                   ),
@@ -582,7 +630,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                                 title: 'Super Admins',
                                 value: '45',
                                 icon: Icons.supervisor_account_rounded,
-                                color: Color(0xFF2A6E9B),
+                                color: Color(0xFF2E7D32),
                                 trend: '+3',
                                 trendUp: true,
                               ),
@@ -604,7 +652,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                                 title: 'Approved Today',
                                 value: '156',
                                 icon: Icons.check_circle_rounded,
-                                color: Color(0xFF54B5D9),
+                                color: Color(0xFF66BB6A),
                                 trend: '+18%',
                                 trendUp: true,
                               ),
@@ -616,56 +664,15 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   ),
                   SizedBox(height: 24),
                   // Request Status Section
-                  Text(
-                    'Request Overview',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2A6E9B),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildRequestCard(
-                          title: 'Approved',
-                          count: '2,456',
-                          icon: Icons.check_circle,
-                          color: Color(0xFF7BB53B),
-                          compact: true,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: _buildRequestCard(
-                          title: 'Rejected',
-                          count: '123',
-                          icon: Icons.cancel,
-                          color: Colors.red,
-                          compact: true,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: _buildRequestCard(
-                          title: 'Pending',
-                          count: '28',
-                          icon: Icons.hourglass_empty,
-                          color: Color(0xFFF4B23B),
-                          compact: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 24),
+                  
+                  
                   // Location Coverage Section
                   Text(
                     'Geographic Coverage',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2A6E9B),
+                      color: Color(0xFF2E7D32),
                     ),
                   ),
                   SizedBox(height: 16),
@@ -676,7 +683,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                           title: 'States',
                           count: '15',
                           icon: Icons.map_rounded,
-                          color: Color(0xFF2A6E9B),
+                          color: Color(0xFF2E7D32),
                           compact: true,
                         ),
                       ),
@@ -686,7 +693,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                           title: 'Cities',
                           count: '234',
                           icon: Icons.location_city_rounded,
-                          color: Color(0xFF54B5D9),
+                          color: Color(0xFF66BB6A),
                           compact: true,
                         ),
                       ),
@@ -723,7 +730,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.history_rounded, color: Color(0xFF2A6E9B)),
+                            Icon(Icons.history_rounded, color: Color(0xFF2E7D32)),
                             SizedBox(width: 8),
                             Flexible(
                               child: Text(
@@ -731,7 +738,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2A6E9B),
+                                  color: Color(0xFF2E7D32),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -749,7 +756,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                           'Request approved by Super Admin',
                           '15 minutes ago',
                           Icons.check_circle,
-                          Color(0xFF54B5D9),
+                          Color(0xFF66BB6A),
                         ),
                         _buildActivityItem(
                           'Email sent to 150 farmers',
@@ -761,7 +768,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                           'New village added: Shirpur',
                           '3 hours ago',
                           Icons.add_location,
-                          Color(0xFF2A6E9B),
+                          Color(0xFF2E7D32),
                         ),
                       ],
                     ),
@@ -776,94 +783,105 @@ class AdminpanelView extends GetView<AdminpanelController> {
   }
 
   Widget _buildStatCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-    required String trend,
-    required bool trendUp,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+  required String title,
+  required String value,
+  required IconData icon,
+  required Color color,
+  required String trend,
+  required bool trendUp,
+}) {
+  return Container(
+    padding: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 10,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Icon Container
+        Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Icon(
+            icon,
+            color: color,
+            size: 28,
+          ),
+        ),
+        SizedBox(width: 16),
+        // Content
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
                 ),
-                child: Icon(icon, color: color, size: 24),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: trendUp
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      trendUp ? Icons.trending_up : Icons.trending_down,
-                      size: 14,
-                      color: trendUp ? Colors.green : Colors.red,
+              SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                      height: 1.1,
                     ),
-                    SizedBox(width: 4),
-                    Text(
-                      trend,
-                      style: TextStyle(
-                        color: trendUp ? Colors.green : Colors.red,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  SizedBox(width: 8),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: trendUp ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ],
-                ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          trendUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                          color: trendUp ? Colors.green : Colors.red,
+                          size: 14,
+                        ),
+                        SizedBox(width: 2),
+                        Text(
+                          trend,
+                          style: TextStyle(
+                            color: trendUp ? Colors.green : Colors.red,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          SizedBox(height: 16),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2A6E9B),
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-          SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 2,
-          ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
+
   }
 
   Widget _buildRequestCard({
@@ -1035,6 +1053,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
           // Header with hamburger menu
           Container(
             padding: EdgeInsets.all(24),
+            margin: EdgeInsets.only(top: 24),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -1058,7 +1077,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                       child: Icon(
                         Icons.menu,
                         size: 28,
-                        color: Color(0xFF2A6E9B),
+                        color: Color(0xFF2E7D32),
                       ),
                     ),
                   ),
@@ -1070,7 +1089,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2A6E9B),
+                      color: Color(0xFF2E7D32),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1084,14 +1103,14 @@ class AdminpanelView extends GetView<AdminpanelController> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 80, color: Color(0xFF2A6E9B).withOpacity(0.3)),
+                  Icon(icon, size: 80, color: Color(0xFF2E7D32).withOpacity(0.3)),
                   SizedBox(height: 16),
                   Text(
                     title,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2A6E9B),
+                      color: Color(0xFF2E7D32),
                     ),
                   ),
                   SizedBox(height: 8),
@@ -1107,6 +1126,369 @@ class AdminpanelView extends GetView<AdminpanelController> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAdminSettings(BuildContext context) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Admin Profile Section
+          _buildAdminProfileCard(),
+          SizedBox(height: 24),
+          
+          // System Settings
+          _buildSettingsGroup(
+            title: 'System Settings',
+            items: [
+              _buildSettingItem(
+                icon: Icons.notifications_outlined,
+                title: 'Notifications',
+                subtitle: 'Manage notification preferences',
+                trailing: Switch(
+                  value: true,
+                  onChanged: (value) {},
+                  activeColor: Color(0xFF2E7D32),
+                ),
+              ),
+              _buildSettingItem(
+                icon: Icons.security_outlined,
+                title: 'Security',
+                subtitle: 'Two-factor authentication',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+              _buildSettingItem(
+                icon: Icons.backup_outlined,
+                title: 'Backup & Restore',
+                subtitle: 'Manage data backups',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+            ],
+          ),
+          SizedBox(height: 24),
+          
+          // Admin Management
+          _buildSettingsGroup(
+            title: 'Admin Management',
+            items: [
+              _buildSettingItem(
+                icon: Icons.admin_panel_settings_outlined,
+                title: 'Admin Roles',
+                subtitle: 'Manage admin permissions',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+              _buildSettingItem(
+                icon: Icons.history_outlined,
+                title: 'Activity Log',
+                subtitle: 'View admin activity history',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+              _buildSettingItem(
+                icon: Icons.people_outline,
+                title: 'User Management',
+                subtitle: 'Manage user accounts',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+            ],
+          ),
+          SizedBox(height: 24),
+          
+          // Application Settings
+          _buildSettingsGroup(
+            title: 'Application',
+            items: [
+              _buildSettingItem(
+                icon: Icons.language_outlined,
+                title: 'Language',
+                subtitle: 'English',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+              _buildSettingItem(
+                icon: Icons.palette_outlined,
+                title: 'Theme',
+                subtitle: 'Light mode',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+              _buildSettingItem(
+                icon: Icons.storage_outlined,
+                title: 'Storage',
+                subtitle: '2.5 GB used',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+            ],
+          ),
+          SizedBox(height: 24),
+          
+          // About Section
+          _buildSettingsGroup(
+            title: 'About',
+            items: [
+              _buildSettingItem(
+                icon: Icons.info_outline,
+                title: 'App Version',
+                subtitle: 'Version 1.0.0',
+                trailing: SizedBox.shrink(),
+              ),
+              _buildSettingItem(
+                icon: Icons.description_outlined,
+                title: 'Terms & Conditions',
+                subtitle: 'Read terms of service',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+              _buildSettingItem(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                subtitle: 'Read privacy policy',
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                onTap: () {},
+              ),
+            ],
+          ),
+          SizedBox(height: 24),
+          
+          // Logout Button
+          _buildLogoutButton(context),
+          SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminProfileCard() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFF2E7D32),
+                  Color(0xFF66BB6A),
+                ],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.admin_panel_settings,
+              color: Colors.white,
+              size: 35,
+            ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Admin User',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E7D32),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'admin@kissanconnect.com',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.edit, color: Color(0xFF2E7D32)),
+            onPressed: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsGroup({
+    required String title,
+    required List<Widget> items,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2E7D32),
+          ),
+        ),
+        SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: items,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Color(0xFF2E7D32).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: Color(0xFF2E7D32), size: 22),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              trailing,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.2),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: () async {
+          final shouldLogout = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text('Logout'),
+              content: Text('Are you sure you want to logout?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Logout'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldLogout == true) {
+            Get.offAllNamed('/auth');
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.logout, size: 22),
+            SizedBox(width: 12),
+            Text(
+              'Logout',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

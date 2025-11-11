@@ -255,7 +255,7 @@ class _SplashScreenViewState extends State<SplashScreenView>
                                 ],
                               ),
                               child: Image.asset(
-                                'assets/images/applogo.png',
+                                'assets/images/smartshetkari.png',
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -296,7 +296,7 @@ class _SplashScreenViewState extends State<SplashScreenView>
                                   ).createShader(bounds);
                                 },
                                 child: const Text(
-                                  'Kissan Connect',
+                                  'Smart SHetkaरी',
                                   style: TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,

@@ -24,7 +24,7 @@ part 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const INITIAL = Routes.SUPERADMINPANEL;
+  static const INITIAL = Routes.ADMINPANEL;
 
   static final routes = [
     GetPage(

@@ -317,19 +317,34 @@ class SendEmailWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: [
-                    Icon(Icons.filter_list, color: Color(0xFF2A6E9B)),
-                    SizedBox(width: 8),
-                    Text(
-                      'Filter Recipients',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2A6E9B),
-                      ),
-                    ),
-                  ],
-                ),
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Icon(Icons.filter_list, color: Color(0xFF2A6E9B)),
+    SizedBox(width: 8),
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Filter Recipients',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2A6E9B),
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          "From",
+          style: TextStyle(
+            fontSize: 14,
+            color: Color(0xFF2A6E9B),
+          ),
+        ),
+      ],
+    ),
+    Spacer(), // This will push the icon to the right
+  ],
+),
                 SizedBox(height: 16),
                 _buildLocationDropdowns(controller),
                 SizedBox(height: 16),
@@ -400,7 +415,7 @@ class SendEmailWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'From',
+                      'To',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],

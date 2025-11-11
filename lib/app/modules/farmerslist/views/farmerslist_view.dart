@@ -29,10 +29,7 @@ class FarmerslistView extends GetView<FarmerslistController> {
                       SizedBox(height: 16),
                       Text(
                         'No farmers found',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -61,10 +58,7 @@ class FarmerslistView extends GetView<FarmerslistController> {
       appBar: AppBar(
         title: const Text(
           'Farmers List',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF2A6E9B),
         elevation: 0,
@@ -88,17 +82,19 @@ class FarmerslistView extends GetView<FarmerslistController> {
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Obx(() => Row(
-          children: [
-            _buildFilterChip('All', 'all'),
-            SizedBox(width: 8),
-            _buildFilterChip('Pending', 'pending'),
-            SizedBox(width: 8),
-            _buildFilterChip('Approved', 'approved'),
-            SizedBox(width: 8),
-            _buildFilterChip('Rejected', 'rejected'),
-          ],
-        )),
+        child: Obx(
+          () => Row(
+            children: [
+              _buildFilterChip('All', 'all'),
+              SizedBox(width: 8),
+              _buildFilterChip('Pending', 'pending'),
+              SizedBox(width: 8),
+              _buildFilterChip('Approved', 'approved'),
+              SizedBox(width: 8),
+              _buildFilterChip('Rejected', 'rejected'),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -122,11 +118,11 @@ class FarmerslistView extends GetView<FarmerslistController> {
 
   Widget _buildFarmerCard(farmer) {
     return GestureDetector(
-      onLongPress: () {
-        if (farmer.status == 'approved') {
-          _showSuperAdminBottomSheet(farmer);
-        }
-      },
+      // onTap: () {
+      //   if (farmer.status == 'approved') {
+      //     _showSuperAdminBottomSheet(farmer);
+      //   }
+      // },
       child: Container(
         margin: EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -148,7 +144,9 @@ class FarmerslistView extends GetView<FarmerslistController> {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: _getStatusColor(farmer.status).withOpacity(0.1),
+                    backgroundColor: _getStatusColor(
+                      farmer.status,
+                    ).withOpacity(0.1),
                     radius: 28,
                     child: Icon(
                       Icons.person,
@@ -176,17 +174,27 @@ class FarmerslistView extends GetView<FarmerslistController> {
                             ),
                             if (farmer.isSuperAdmin)
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [Color(0xFFF4B23B), Color(0xFFF4B23B).withOpacity(0.7)],
+                                    colors: [
+                                      Color(0xFFF4B23B),
+                                      Color(0xFFF4B23B).withOpacity(0.7),
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.star, size: 14, color: Colors.white),
+                                    Icon(
+                                      Icons.star,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
                                     SizedBox(width: 4),
                                     Text(
                                       'Super Admin',
@@ -204,7 +212,11 @@ class FarmerslistView extends GetView<FarmerslistController> {
                         SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                            Icon(
+                              Icons.phone,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
                             SizedBox(width: 4),
                             Text(
                               farmer.contact,
@@ -215,11 +227,16 @@ class FarmerslistView extends GetView<FarmerslistController> {
                             ),
                           ],
                         ),
-                        if (farmer.isSuperAdmin && farmer.superAdminLevel != null) ...[
+                        if (farmer.isSuperAdmin &&
+                            farmer.superAdminLevel != null) ...[
                           SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.location_on, size: 14, color: Color(0xFF7BB53B)),
+                              Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Color(0xFF7BB53B),
+                              ),
                               SizedBox(width: 4),
                               Expanded(
                                 child: Text(
@@ -252,7 +269,10 @@ class FarmerslistView extends GetView<FarmerslistController> {
                       label: Text('Reject'),
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.red,
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                     SizedBox(width: 8),
@@ -263,18 +283,47 @@ class FarmerslistView extends GetView<FarmerslistController> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFF7BB53B),
                         foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         elevation: 0,
                       ),
                     ),
                   ],
                   if (farmer.status == 'approved' && !farmer.isSuperAdmin)
-                    Text(
-                      'Long press to assign as Super Admin',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                        fontStyle: FontStyle.italic,
+                    ElevatedButton(
+                      onPressed: () => _showSuperAdminBottomSheet(farmer),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.shield, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Assign Super Admin',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(
+                          0xFF2A6E9B,
+                        ), // Darker blue for better contrast
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            8,
+                          ), // Slightly rounded corners
+                        ),
+                        shadowColor: Colors.black.withOpacity(0.1),
                       ),
                     ),
                 ],
@@ -370,10 +419,7 @@ class FarmerslistView extends GetView<FarmerslistController> {
                   SizedBox(height: 8),
                   Text(
                     'Make ${farmer.name} a Super Admin?',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[700],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                   ),
                   SizedBox(height: 24),
                   Text(
@@ -387,32 +433,38 @@ class FarmerslistView extends GetView<FarmerslistController> {
                   SizedBox(height: 16),
                   _buildLocationDropdowns(),
                   SizedBox(height: 16),
-                  Obx(() => Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF54B5D9).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Color(0xFF54B5D9).withOpacity(0.3),
+                  Obx(
+                    () => Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF54B5D9).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Color(0xFF54B5D9).withOpacity(0.3),
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 18, color: Color(0xFF54B5D9)),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Selected: ${controller.getSuperAdminLevelText()}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF2A6E9B),
-                              fontWeight: FontWeight.w500,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: Color(0xFF54B5D9),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Selected: ${controller.getSuperAdminLevelText()}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF2A6E9B),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                   SizedBox(height: 24),
                   Row(
                     children: [
@@ -431,7 +483,8 @@ class FarmerslistView extends GetView<FarmerslistController> {
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
-                          onPressed: () => controller.assignSuperAdmin(farmer.id),
+                          onPressed: () =>
+                              controller.assignSuperAdmin(farmer.id),
                           child: Text('Assign Now'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xFF7BB53B),
@@ -455,62 +508,64 @@ class FarmerslistView extends GetView<FarmerslistController> {
   }
 
   Widget _buildLocationDropdowns() {
-    return Obx(() => Column(
-      children: [
-        // State Dropdown
-        _buildDropdown(
-          label: 'State',
-          value: controller.selectedState.value,
-          items: controller.states,
-          onChanged: (value) {
-            controller.selectedState.value = value;
-            controller.selectedDistrict.value = null;
-            controller.selectedCity.value = null;
-            controller.selectedVillage.value = null;
-          },
-          icon: Icons.map,
-        ),
-        if (controller.selectedState.value != null) ...[
-          SizedBox(height: 12),
+    return Obx(
+      () => Column(
+        children: [
+          // State Dropdown
           _buildDropdown(
-            label: 'District',
-            value: controller.selectedDistrict.value,
-            items: controller.getDistricts(),
+            label: 'State',
+            value: controller.selectedState.value,
+            items: controller.states,
             onChanged: (value) {
-              controller.selectedDistrict.value = value;
+              controller.selectedState.value = value;
+              controller.selectedDistrict.value = null;
               controller.selectedCity.value = null;
               controller.selectedVillage.value = null;
             },
-            icon: Icons.location_city,
+            icon: Icons.map,
           ),
+          if (controller.selectedState.value != null) ...[
+            SizedBox(height: 12),
+            _buildDropdown(
+              label: 'District',
+              value: controller.selectedDistrict.value,
+              items: controller.getDistricts(),
+              onChanged: (value) {
+                controller.selectedDistrict.value = value;
+                controller.selectedCity.value = null;
+                controller.selectedVillage.value = null;
+              },
+              icon: Icons.location_city,
+            ),
+          ],
+          if (controller.selectedDistrict.value != null) ...[
+            SizedBox(height: 12),
+            _buildDropdown(
+              label: 'City',
+              value: controller.selectedCity.value,
+              items: controller.getCities(),
+              onChanged: (value) {
+                controller.selectedCity.value = value;
+                controller.selectedVillage.value = null;
+              },
+              icon: Icons.apartment,
+            ),
+          ],
+          if (controller.selectedCity.value != null) ...[
+            SizedBox(height: 12),
+            _buildDropdown(
+              label: 'Village',
+              value: controller.selectedVillage.value,
+              items: controller.getVillages(),
+              onChanged: (value) {
+                controller.selectedVillage.value = value;
+              },
+              icon: Icons.home_work,
+            ),
+          ],
         ],
-        if (controller.selectedDistrict.value != null) ...[
-          SizedBox(height: 12),
-          _buildDropdown(
-            label: 'City',
-            value: controller.selectedCity.value,
-            items: controller.getCities(),
-            onChanged: (value) {
-              controller.selectedCity.value = value;
-              controller.selectedVillage.value = null;
-            },
-            icon: Icons.apartment,
-          ),
-        ],
-        if (controller.selectedCity.value != null) ...[
-          SizedBox(height: 12),
-          _buildDropdown(
-            label: 'Village',
-            value: controller.selectedVillage.value,
-            items: controller.getVillages(),
-            onChanged: (value) {
-              controller.selectedVillage.value = value;
-            },
-            icon: Icons.home_work,
-          ),
-        ],
-      ],
-    ));
+      ),
+    );
   }
 
   Widget _buildDropdown({
@@ -534,10 +589,7 @@ class FarmerslistView extends GetView<FarmerslistController> {
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         items: items.map((item) {
-          return DropdownMenuItem(
-            value: item,
-            child: Text(item),
-          );
+          return DropdownMenuItem(value: item, child: Text(item));
         }).toList(),
         onChanged: onChanged,
         hint: Text('Select $label'),

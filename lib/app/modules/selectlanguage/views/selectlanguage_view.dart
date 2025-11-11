@@ -190,7 +190,7 @@ class SelectlanguageView extends GetView<SelectlanguageController> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: const AssetImage('assets/images/applogo.png'),
+                      image: const AssetImage('assets/images/smartshetkari.png'),
                       opacity: 0.1,
                       fit: BoxFit.contain,
                     ),

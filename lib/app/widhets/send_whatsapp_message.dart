@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kissan_connect/app/utils/ui_utils.dart';
 
 class WhatsAppFarmer {
   final String id;
@@ -18,13 +19,13 @@ class WhatsAppFarmer {
 class SendWhatsappController extends GetxController {
   // List of farmers
   final farmers = <WhatsAppFarmer>[].obs;
-  
+
   // Selected farmer IDs
   final selectedIds = <String>{}.obs;
-  
+
   // Message controller
   final messageController = TextEditingController();
-  
+
   // Sending state
   final isSending = false.obs;
 
@@ -112,24 +113,14 @@ class SendWhatsappController extends GetxController {
 
   Future<void> sendWhatsAppMessage() async {
     final message = messageController.text.trim();
-    
+
     if (selectedIds.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please select at least one farmer',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-      );
+      UiUtils.showErrorSnackbar('Error', 'Please select at least one farmer');
       return;
     }
 
     if (message.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter a message',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-      );
+      UiUtils.showErrorSnackbar('Error', 'Please enter a message');
       return;
     }
 
@@ -138,24 +129,16 @@ class SendWhatsappController extends GetxController {
     try {
       // TODO: Integrate with WhatsApp Business API or backend service
       await Future.delayed(Duration(seconds: 2));
-      
-      Get.snackbar(
+
+      UiUtils.showSuccessSnackbar(
         'Success',
         'WhatsApp message sent to ${selectedIds.length} farmer(s)',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Color(0xFF7BB53B).withOpacity(0.1),
-        duration: Duration(seconds: 2),
       );
-      
+
       messageController.clear();
       clearSelection();
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to send WhatsApp message',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
-      );
+      UiUtils.showErrorSnackbar('Error', 'Failed to send WhatsApp message');
     } finally {
       isSending.value = false;
     }
@@ -174,39 +157,47 @@ class SendWhatsappWidget extends StatelessWidget {
       child: Column(
         children: [
           // Selection toolbar
-          Obx(() => controller.selectedIds.isNotEmpty
-              ? Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF25D366).withOpacity(0.1),
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFF25D366).withOpacity(0.3)),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Color(0xFF25D366), size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        '${controller.selectedIds.length} selected',
-                        style: TextStyle(
-                          color: Color(0xFF2A6E9B),
-                          fontWeight: FontWeight.w600,
+          Obx(
+            () => controller.selectedIds.isNotEmpty
+                ? Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF25D366).withOpacity(0.1),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Color(0xFF25D366).withOpacity(0.3),
                         ),
                       ),
-                      Spacer(),
-                      TextButton(
-                        onPressed: controller.clearSelection,
-                        child: Text('Clear'),
-                      ),
-                      TextButton(
-                        onPressed: controller.selectAll,
-                        child: Text('Select All'),
-                      ),
-                    ],
-                  ),
-                )
-              : SizedBox.shrink()),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF25D366),
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          '${controller.selectedIds.length} selected',
+                          style: TextStyle(
+                            color: Color(0xFF2A6E9B),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Spacer(),
+                        TextButton(
+                          onPressed: controller.clearSelection,
+                          child: Text('Clear'),
+                        ),
+                        TextButton(
+                          onPressed: controller.selectAll,
+                          child: Text('Select All'),
+                        ),
+                      ],
+                    ),
+                  )
+                : SizedBox.shrink(),
+          ),
           // Farmers list
           Expanded(
             child: Obx(() {
@@ -216,7 +207,11 @@ class SendWhatsappWidget extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.people_outline, size: 80, color: Colors.grey[400]),
+                      Icon(
+                        Icons.people_outline,
+                        size: 80,
+                        color: Colors.grey[400],
+                      ),
                       SizedBox(height: 12),
                       Text(
                         'No farmers found',
@@ -240,7 +235,9 @@ class SendWhatsappWidget extends StatelessWidget {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: selected ? Color(0xFF25D366) : Colors.transparent,
+                          color: selected
+                              ? Color(0xFF25D366)
+                              : Colors.transparent,
                           width: 2,
                         ),
                         boxShadow: [
@@ -273,23 +270,37 @@ class SendWhatsappWidget extends StatelessWidget {
                                 SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                                    Icon(
+                                      Icons.phone,
+                                      size: 14,
+                                      color: Colors.grey[600],
+                                    ),
                                     SizedBox(width: 4),
                                     Text(
                                       farmer.phone,
-                                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[700],
+                                      ),
                                     ),
                                   ],
                                 ),
                                 SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    Icon(Icons.location_on, size: 14, color: Color(0xFF54B5D9)),
+                                    Icon(
+                                      Icons.location_on,
+                                      size: 14,
+                                      color: Color(0xFF54B5D9),
+                                    ),
                                     SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
                                         farmer.location,
-                                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -300,8 +311,11 @@ class SendWhatsappWidget extends StatelessWidget {
                           ),
                           Checkbox(
                             value: selected,
-                            onChanged: (v) => controller.toggleSelection(farmer.id, v),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            onChanged: (v) =>
+                                controller.toggleSelection(farmer.id, v),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                             activeColor: Color(0xFF25D366),
                           ),
                         ],
@@ -349,38 +363,42 @@ class SendWhatsappWidget extends StatelessWidget {
                   ),
                   SizedBox(height: 12),
                   // Send button
-                  Obx(() => SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: controller.isSending.value
-                          ? null
-                          : controller.sendWhatsAppMessage,
-                      icon: controller.isSending.value
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Icon(Icons.send, size: 20),
-                      label: Text(
-                        controller.isSending.value ? 'Sending...' : 'Send WhatsApp Message',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF25D366),
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  Obx(
+                    () => SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: controller.isSending.value
+                            ? null
+                            : controller.sendWhatsAppMessage,
+                        icon: controller.isSending.value
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Icon(Icons.send, size: 20),
+                        label: Text(
+                          controller.isSending.value
+                              ? 'Sending...'
+                              : 'Send WhatsApp Message',
+                          style: TextStyle(fontSize: 16),
                         ),
-                        elevation: 0,
-                        disabledBackgroundColor: Colors.grey[400],
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF25D366),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                          disabledBackgroundColor: Colors.grey[400],
+                        ),
                       ),
                     ),
-                  )),
+                  ),
                 ],
               ),
             ),

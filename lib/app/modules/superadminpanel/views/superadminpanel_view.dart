@@ -47,8 +47,8 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF2A6E9B),
-            Color(0xFF1E5A7D),
+            Color(0xFF2E7D32),
+            Color(0xFF1B5E20),
           ],
         ),
         boxShadow: [
@@ -244,21 +244,21 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
                       child: Icon(
                         Icons.menu,
                         size: 28,
-                        color: Color(0xFF2A6E9B),
+                        color: Color(0xFF2E7D32),
                       ),
                     ),
                   ),
                 ),
                 SizedBox(width: 16),
-                Icon(icon, color: Color(0xFF2A6E9B), size: 28),
+                Icon(icon, color: Color(0xFF2E7D32), size: 24),
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2A6E9B),
+                      color: Color(0xFF2E7D32),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),

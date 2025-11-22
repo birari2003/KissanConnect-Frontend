@@ -218,6 +218,8 @@ class LoginsignupView extends GetView<LoginsignupController> {
             //     ),
             //   ),
             // ),
+
+            // extra
             const SizedBox(height: 24),
 
             // Login Button

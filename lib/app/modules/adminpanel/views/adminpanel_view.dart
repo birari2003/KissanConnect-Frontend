@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/adminpanel_controller.dart';
 import '../../farmerslist/views/farmerslist_view.dart';
 import '../../farmerslist/controllers/farmerslist_controller.dart';
@@ -7,6 +8,8 @@ import '../../superadminlist/views/superadminlist_view.dart';
 import '../../superadminlist/controllers/superadminlist_controller.dart';
 import '../../../widhets/send_email.dart';
 import '../../../widhets/send_whatsapp_message.dart';
+import '../../../widhets/government_schema.dart';
+import '../../../widhets/crop_claim.dart';
 
 class AdminpanelView extends GetView<AdminpanelController> {
   const AdminpanelView({super.key});
@@ -19,23 +22,25 @@ class AdminpanelView extends GetView<AdminpanelController> {
           // Main Content Area (always full width)
           _buildContent(context),
           // Overlay when navigation is open
-          Obx(() => controller.isNavigationOpen.value
-              ? GestureDetector(
-                  onTap: () => controller.toggleNavigation(),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.5),
-                  ),
-                )
-              : SizedBox.shrink()),
+          Obx(
+            () => controller.isNavigationOpen.value
+                ? GestureDetector(
+                    onTap: () => controller.toggleNavigation(),
+                    child: Container(color: Colors.black.withOpacity(0.5)),
+                  )
+                : SizedBox.shrink(),
+          ),
           // Side Navigation
-          Obx(() => AnimatedPositioned(
-            duration: Duration(milliseconds: 300),
-            left: controller.isNavigationOpen.value ? 0 : -250,
-            top: 0,
-            bottom: 0,
-            width: 250,
-            child: _buildSideNavigation(context),
-          )),
+          Obx(
+            () => AnimatedPositioned(
+              duration: Duration(milliseconds: 300),
+              left: controller.isNavigationOpen.value ? 0 : -250,
+              top: 0,
+              bottom: 0,
+              width: 250,
+              child: _buildSideNavigation(context),
+            ),
+          ),
         ],
       ),
     );
@@ -50,7 +55,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
           end: Alignment.bottomCenter,
           colors: [
             Color(0xFF2E7D32), // Green
-             Color(0xFF7BB53B),
+            Color(0xFF7BB53B),
           ],
         ),
         boxShadow: [
@@ -106,46 +111,60 @@ class AdminpanelView extends GetView<AdminpanelController> {
           // Navigation Items
           Expanded(
             child: SingleChildScrollView(
-              child: Obx(() => Column(
-                children: [
-                  _buildNavItem(
-                    icon: Icons.dashboard_rounded,
-                    title: 'Dashboard',
-                    index: 0,
-                    isSelected: controller.selectedIndex.value == 0,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.agriculture_rounded,
-                    title: 'Farmers',
-                    index: 1,
-                    isSelected: controller.selectedIndex.value == 1,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.supervisor_account_rounded,
-                    title: 'Super Admins',
-                    index: 2,
-                    isSelected: controller.selectedIndex.value == 2,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.email_rounded,
-                    title: 'Send Email',
-                    index: 3,
-                    isSelected: controller.selectedIndex.value == 3,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.chat_rounded,
-                    title: 'Send WhatsApp',
-                    index: 4,
-                    isSelected: controller.selectedIndex.value == 4,
-                  ),
-                  _buildNavItem(
-                    icon: Icons.settings_rounded,
-                    title: 'Settings',
-                    index: 5,
-                    isSelected: controller.selectedIndex.value == 5,
-                  ),
-                ],
-              )),
+              child: Obx(
+                () => Column(
+                  children: [
+                    _buildNavItem(
+                      icon: Icons.dashboard_rounded,
+                      title: 'Dashboard',
+                      index: 0,
+                      isSelected: controller.selectedIndex.value == 0,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.agriculture_rounded,
+                      title: 'Farmers',
+                      index: 1,
+                      isSelected: controller.selectedIndex.value == 1,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.supervisor_account_rounded,
+                      title: 'Super Admins',
+                      index: 2,
+                      isSelected: controller.selectedIndex.value == 2,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.email_rounded,
+                      title: 'Send Email',
+                      index: 3,
+                      isSelected: controller.selectedIndex.value == 3,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.chat_rounded,
+                      title: 'Send WhatsApp',
+                      index: 4,
+                      isSelected: controller.selectedIndex.value == 4,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.account_balance,
+                      title: 'Govt Schemes',
+                      index: 5,
+                      isSelected: controller.selectedIndex.value == 5,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.agriculture,
+                      title: 'Crop Claim',
+                      index: 6,
+                      isSelected: controller.selectedIndex.value == 6,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.settings_rounded,
+                      title: 'Settings',
+                      index: 7,
+                      isSelected: controller.selectedIndex.value == 7,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           // Footer
@@ -174,10 +193,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                       ),
                       Text(
                         'admin@kissan.com',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 11),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -285,6 +301,20 @@ class AdminpanelView extends GetView<AdminpanelController> {
         case 5:
           return _buildPageWithHeader(
             context,
+            'Government Schemes',
+            Icons.account_balance,
+            const GovernmentSchemeWidget(),
+          );
+        case 6:
+          return _buildPageWithHeader(
+            context,
+            'Crop Claim',
+            Icons.agriculture,
+            const CropClaimWidget(),
+          );
+        case 7:
+          return _buildPageWithHeader(
+            context,
             'Settings',
             Icons.settings_rounded,
             _buildAdminSettings(context),
@@ -307,7 +337,12 @@ class AdminpanelView extends GetView<AdminpanelController> {
     }
   }
 
-  Widget _buildPageWithHeader(BuildContext context, String title, IconData icon, Widget content) {
+  Widget _buildPageWithHeader(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Widget content,
+  ) {
     return Container(
       color: Color(0xFFF5F7FA),
       child: Column(
@@ -351,7 +386,6 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   child: Text(
                     title,
                     style: TextStyle(
-                    
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF2E7D32),
@@ -422,10 +456,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                       SizedBox(height: 4),
                       Text(
                         'Welcome back! Here\'s what\'s happening with KissanConnect',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -441,7 +472,11 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: Color(0xFF7BB53B)),
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Color(0xFF7BB53B),
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Today',
@@ -476,32 +511,38 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildRequestCard(
-                          title: 'Approved',
-                          count: '2,456',
-                          icon: Icons.check_circle,
-                          color: Color(0xFF7BB53B),
-                          compact: true,
+                        child: Obx(
+                          () => _buildRequestCard(
+                            title: 'Approved',
+                            count: controller.approvedRequests.value.toString(),
+                            icon: Icons.check_circle,
+                            color: Color(0xFF7BB53B),
+                            compact: true,
+                          ),
                         ),
                       ),
                       SizedBox(width: 12),
                       Expanded(
-                        child: _buildRequestCard(
-                          title: 'Rejected',
-                          count: '123',
-                          icon: Icons.cancel,
-                          color: Colors.red,
-                          compact: true,
+                        child: Obx(
+                          () => _buildRequestCard(
+                            title: 'Rejected',
+                            count: controller.rejectedRequests.value.toString(),
+                            icon: Icons.cancel,
+                            color: Colors.red,
+                            compact: true,
+                          ),
                         ),
                       ),
                       SizedBox(width: 12),
                       Expanded(
-                        child: _buildRequestCard(
-                          title: 'Pending',
-                          count: '28',
-                          icon: Icons.hourglass_empty,
-                          color: Color(0xFFF4B23B),
-                          compact: true,
+                        child: Obx(
+                          () => _buildRequestCard(
+                            title: 'Pending',
+                            count: controller.pendingRequests.value.toString(),
+                            icon: Icons.hourglass_empty,
+                            color: Color(0xFFF4B23B),
+                            compact: true,
+                          ),
                         ),
                       ),
                     ],
@@ -510,42 +551,52 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       bool isMobile = constraints.maxWidth < 600;
-                      bool isTablet = constraints.maxWidth >= 600 && constraints.maxWidth < 1024;
-                      
+                      bool isTablet =
+                          constraints.maxWidth >= 600 &&
+                          constraints.maxWidth < 1024;
+
                       if (isMobile) {
                         // Mobile: 1 card per row
                         return Column(
                           children: [
-                            _buildStatCard(
-                              title: 'Total Farmers',
-                              value: '1,234',
-                              icon: Icons.agriculture_rounded,
-                              color: Color(0xFF7BB53B),
-                              trend: '+12%',
-                              trendUp: true,
+                            Obx(
+                              () => _buildStatCard(
+                                title: 'Total Farmers',
+                                value: controller.totalFarmers.value.toString(),
+                                icon: Icons.agriculture_rounded,
+                                color: Color(0xFF7BB53B),
+                                trend: '+12%',
+                                trendUp: true,
+                              ),
                             ),
                             SizedBox(height: 16),
-                            _buildStatCard(
-                              title: 'Super Admins',
-                              value: '45',
-                              icon: Icons.supervisor_account_rounded,
-                              color: Color(0xFF2E7D32),
-                              trend: '+3',
-                              trendUp: true,
+                            Obx(
+                              () => _buildStatCard(
+                                title: 'Super Admins',
+                                value: controller.totalSuperAdmins.value
+                                    .toString(),
+                                icon: Icons.supervisor_account_rounded,
+                                color: Color(0xFF2E7D32),
+                                trend: '+3',
+                                trendUp: true,
+                              ),
                             ),
                             SizedBox(height: 16),
-                            _buildStatCard(
-                              title: 'Pending Requests',
-                              value: '28',
-                              icon: Icons.pending_actions_rounded,
-                              color: Color(0xFFF4B23B),
-                              trend: '-5',
-                              trendUp: false,
+                            Obx(
+                              () => _buildStatCard(
+                                title: 'Pending Requests',
+                                value: controller.pendingRequests.value
+                                    .toString(),
+                                icon: Icons.pending_actions_rounded,
+                                color: Color(0xFFF4B23B),
+                                trend: '-5',
+                                trendUp: false,
+                              ),
                             ),
                             SizedBox(height: 16),
                             _buildStatCard(
                               title: 'Approved Today',
-                              value: '156',
+                              value: '1',
                               icon: Icons.check_circle_rounded,
                               color: Color(0xFF54B5D9),
                               trend: '+18%',
@@ -560,24 +611,30 @@ class AdminpanelView extends GetView<AdminpanelController> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: _buildStatCard(
-                                    title: 'Total Farmers',
-                                    value: '1,234',
-                                    icon: Icons.agriculture_rounded,
-                                    color: Color(0xFF7BB53B),
-                                    trend: '+12%',
-                                    trendUp: true,
+                                  child: Obx(
+                                    () => _buildStatCard(
+                                      title: 'Total Farmers',
+                                      value: controller.totalFarmers.value
+                                          .toString(),
+                                      icon: Icons.agriculture_rounded,
+                                      color: Color(0xFF7BB53B),
+                                      trend: '+12%',
+                                      trendUp: true,
+                                    ),
                                   ),
                                 ),
                                 SizedBox(width: 16),
                                 Expanded(
-                                  child: _buildStatCard(
-                                    title: 'Super Admins',
-                                    value: '45',
-                                    icon: Icons.supervisor_account_rounded,
-                                    color: Color(0xFF2E7D32),
-                                    trend: '+3',
-                                    trendUp: true,
+                                  child: Obx(
+                                    () => _buildStatCard(
+                                      title: 'Super Admins',
+                                      value: controller.totalSuperAdmins.value
+                                          .toString(),
+                                      icon: Icons.supervisor_account_rounded,
+                                      color: Color(0xFF2E7D32),
+                                      trend: '+3',
+                                      trendUp: true,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -586,13 +643,16 @@ class AdminpanelView extends GetView<AdminpanelController> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: _buildStatCard(
-                                    title: 'Pending Requests',
-                                    value: '28',
-                                    icon: Icons.pending_actions_rounded,
-                                    color: Color(0xFFF4B23B),
-                                    trend: '-5',
-                                    trendUp: false,
+                                  child: Obx(
+                                    () => _buildStatCard(
+                                      title: 'Pending Requests',
+                                      value: controller.pendingRequests.value
+                                          .toString(),
+                                      icon: Icons.pending_actions_rounded,
+                                      color: Color(0xFFF4B23B),
+                                      trend: '-5',
+                                      trendUp: false,
+                                    ),
                                   ),
                                 ),
                                 SizedBox(width: 16),
@@ -615,35 +675,44 @@ class AdminpanelView extends GetView<AdminpanelController> {
                         return Row(
                           children: [
                             Expanded(
-                              child: _buildStatCard(
-                                title: 'Total Farmers',
-                                value: '1,234',
-                                icon: Icons.agriculture_rounded,
-                                color: Color(0xFF7BB53B),
-                                trend: '+12%',
-                                trendUp: true,
+                              child: Obx(
+                                () => _buildStatCard(
+                                  title: 'Total Farmers',
+                                  value: controller.totalFarmers.value
+                                      .toString(),
+                                  icon: Icons.agriculture_rounded,
+                                  color: Color(0xFF7BB53B),
+                                  trend: '+12%',
+                                  trendUp: true,
+                                ),
                               ),
                             ),
                             SizedBox(width: 16),
                             Expanded(
-                              child: _buildStatCard(
-                                title: 'Super Admins',
-                                value: '45',
-                                icon: Icons.supervisor_account_rounded,
-                                color: Color(0xFF2E7D32),
-                                trend: '+3',
-                                trendUp: true,
+                              child: Obx(
+                                () => _buildStatCard(
+                                  title: 'Super Admins',
+                                  value: controller.totalSuperAdmins.value
+                                      .toString(),
+                                  icon: Icons.supervisor_account_rounded,
+                                  color: Color(0xFF2E7D32),
+                                  trend: '+3',
+                                  trendUp: true,
+                                ),
                               ),
                             ),
                             SizedBox(width: 16),
                             Expanded(
-                              child: _buildStatCard(
-                                title: 'Pending Requests',
-                                value: '28',
-                                icon: Icons.pending_actions_rounded,
-                                color: Color(0xFFF4B23B),
-                                trend: '-5',
-                                trendUp: false,
+                              child: Obx(
+                                () => _buildStatCard(
+                                  title: 'Pending Requests',
+                                  value: controller.pendingRequests.value
+                                      .toString(),
+                                  icon: Icons.pending_actions_rounded,
+                                  color: Color(0xFFF4B23B),
+                                  trend: '-5',
+                                  trendUp: false,
+                                ),
                               ),
                             ),
                             SizedBox(width: 16),
@@ -664,8 +733,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   ),
                   SizedBox(height: 24),
                   // Request Status Section
-                  
-                  
+
                   // Location Coverage Section
                   Text(
                     'Geographic Coverage',
@@ -679,32 +747,38 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildLocationCard(
-                          title: 'States',
-                          count: '15',
-                          icon: Icons.map_rounded,
-                          color: Color(0xFF2E7D32),
-                          compact: true,
+                        child: Obx(
+                          () => _buildLocationCard(
+                            title: 'States',
+                            count: controller.totalStates.value.toString(),
+                            icon: Icons.map_rounded,
+                            color: Color(0xFF2E7D32),
+                            compact: true,
+                          ),
                         ),
                       ),
                       SizedBox(width: 12),
                       Expanded(
-                        child: _buildLocationCard(
-                          title: 'Cities',
-                          count: '234',
-                          icon: Icons.location_city_rounded,
-                          color: Color(0xFF66BB6A),
-                          compact: true,
+                        child: Obx(
+                          () => _buildLocationCard(
+                            title: 'Districts',
+                            count: controller.totalDistricts.value.toString(),
+                            icon: Icons.location_city_rounded,
+                            color: Color(0xFF66BB6A),
+                            compact: true,
+                          ),
                         ),
                       ),
                       SizedBox(width: 12),
                       Expanded(
-                        child: _buildLocationCard(
-                          title: 'Villages',
-                          count: '1,567',
-                          icon: Icons.home_work_rounded,
-                          color: Color(0xFF7BB53B),
-                          compact: true,
+                        child: Obx(
+                          () => _buildLocationCard(
+                            title: 'Talukas',
+                            count: controller.totalTalukas.value.toString(),
+                            icon: Icons.home_work_rounded,
+                            color: Color(0xFF7BB53B),
+                            compact: true,
+                          ),
                         ),
                       ),
                     ],
@@ -730,7 +804,10 @@ class AdminpanelView extends GetView<AdminpanelController> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.history_rounded, color: Color(0xFF2E7D32)),
+                            Icon(
+                              Icons.history_rounded,
+                              color: Color(0xFF2E7D32),
+                            ),
                             SizedBox(width: 8),
                             Flexible(
                               child: Text(
@@ -759,7 +836,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                           Color(0xFF66BB6A),
                         ),
                         _buildActivityItem(
-                          'Email sent to 150 farmers',
+                          'Email sent to 1 farmers',
                           '1 hour ago',
                           Icons.email,
                           Color(0xFFF4B23B),
@@ -783,105 +860,104 @@ class AdminpanelView extends GetView<AdminpanelController> {
   }
 
   Widget _buildStatCard({
-  required String title,
-  required String value,
-  required IconData icon,
-  required Color color,
-  required String trend,
-  required bool trendUp,
-}) {
-  return Container(
-    padding: EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Icon Container
-        Container(
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+    required String trend,
+    required bool trendUp,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 28,
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon Container
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 28),
           ),
-        ),
-        SizedBox(width: 16),
-        // Content
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+          SizedBox(width: 16),
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
-                      height: 1.1,
+                SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                        height: 1.1,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 8),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: trendUp ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          trendUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                          color: trendUp ? Colors.green : Colors.red,
-                          size: 14,
-                        ),
-                        SizedBox(width: 2),
-                        Text(
-                          trend,
-                          style: TextStyle(
+                    SizedBox(width: 8),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: trendUp
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            trendUp
+                                ? Icons.arrow_upward_rounded
+                                : Icons.arrow_downward_rounded,
                             color: trendUp ? Colors.green : Colors.red,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            size: 14,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 2),
+                          Text(
+                            trend,
+                            style: TextStyle(
+                              color: trendUp ? Colors.green : Colors.red,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-
+        ],
+      ),
+    );
   }
 
   Widget _buildRequestCard({
@@ -957,10 +1033,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            color,
-            color.withOpacity(0.7),
-          ],
+          colors: [color, color.withOpacity(0.7)],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -999,7 +1072,12 @@ class AdminpanelView extends GetView<AdminpanelController> {
     );
   }
 
-  Widget _buildActivityItem(String title, String time, IconData icon, Color color) {
+  Widget _buildActivityItem(
+    String title,
+    String time,
+    IconData icon,
+    Color color,
+  ) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -1032,10 +1110,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                 SizedBox(height: 2),
                 Text(
                   time,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
               ],
             ),
@@ -1103,7 +1178,11 @@ class AdminpanelView extends GetView<AdminpanelController> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 80, color: Color(0xFF2E7D32).withOpacity(0.3)),
+                  Icon(
+                    icon,
+                    size: 80,
+                    color: Color(0xFF2E7D32).withOpacity(0.3),
+                  ),
                   SizedBox(height: 16),
                   Text(
                     title,
@@ -1116,10 +1195,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   SizedBox(height: 8),
                   Text(
                     'This section is under development',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -1139,7 +1215,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
           // Admin Profile Section
           _buildAdminProfileCard(),
           SizedBox(height: 24),
-          
+
           // System Settings
           _buildSettingsGroup(
             title: 'System Settings',
@@ -1158,20 +1234,28 @@ class AdminpanelView extends GetView<AdminpanelController> {
                 icon: Icons.security_outlined,
                 title: 'Security',
                 subtitle: 'Two-factor authentication',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
               _buildSettingItem(
                 icon: Icons.backup_outlined,
                 title: 'Backup & Restore',
                 subtitle: 'Manage data backups',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
             ],
           ),
           SizedBox(height: 24),
-          
+
           // Admin Management
           _buildSettingsGroup(
             title: 'Admin Management',
@@ -1180,27 +1264,39 @@ class AdminpanelView extends GetView<AdminpanelController> {
                 icon: Icons.admin_panel_settings_outlined,
                 title: 'Admin Roles',
                 subtitle: 'Manage admin permissions',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
               _buildSettingItem(
                 icon: Icons.history_outlined,
                 title: 'Activity Log',
                 subtitle: 'View admin activity history',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
               _buildSettingItem(
                 icon: Icons.people_outline,
                 title: 'User Management',
                 subtitle: 'Manage user accounts',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
             ],
           ),
           SizedBox(height: 24),
-          
+
           // Application Settings
           _buildSettingsGroup(
             title: 'Application',
@@ -1209,27 +1305,39 @@ class AdminpanelView extends GetView<AdminpanelController> {
                 icon: Icons.language_outlined,
                 title: 'Language',
                 subtitle: 'English',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
               _buildSettingItem(
                 icon: Icons.palette_outlined,
                 title: 'Theme',
                 subtitle: 'Light mode',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
               _buildSettingItem(
                 icon: Icons.storage_outlined,
                 title: 'Storage',
                 subtitle: '2.5 GB used',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
             ],
           ),
           SizedBox(height: 24),
-          
+
           // About Section
           _buildSettingsGroup(
             title: 'About',
@@ -1244,20 +1352,28 @@ class AdminpanelView extends GetView<AdminpanelController> {
                 icon: Icons.description_outlined,
                 title: 'Terms & Conditions',
                 subtitle: 'Read terms of service',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
               _buildSettingItem(
                 icon: Icons.privacy_tip_outlined,
                 title: 'Privacy Policy',
                 subtitle: 'Read privacy policy',
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 onTap: () {},
               ),
             ],
           ),
           SizedBox(height: 24),
-          
+
           // Logout Button
           _buildLogoutButton(context),
           SizedBox(height: 24),
@@ -1287,10 +1403,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
             height: 70,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFF2E7D32),
-                  Color(0xFF66BB6A),
-                ],
+                colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
               ),
               shape: BoxShape.circle,
             ),
@@ -1316,10 +1429,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                 SizedBox(height: 4),
                 Text(
                   'admin@kissanconnect.com',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -1361,9 +1471,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
               ),
             ],
           ),
-          child: Column(
-            children: items,
-          ),
+          child: Column(children: items),
         ),
       ],
     );
@@ -1409,10 +1517,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
                     SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -1463,7 +1568,23 @@ class AdminpanelView extends GetView<AdminpanelController> {
           );
 
           if (shouldLogout == true) {
-            Get.offAllNamed('/auth');
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+
+              Get.offAllNamed('/loginsignup');
+
+              Get.snackbar(
+                'Success',
+                'Logged out successfully',
+                backgroundColor: Colors.green,
+                colorText: Colors.white,
+                snackPosition: SnackPosition.BOTTOM,
+                margin: EdgeInsets.all(16),
+              );
+            } catch (e) {
+              print('Error during logout: $e');
+            }
           }
         },
         style: ElevatedButton.styleFrom(
@@ -1482,10 +1603,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
             SizedBox(width: 12),
             Text(
               'Logout',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ],
         ),

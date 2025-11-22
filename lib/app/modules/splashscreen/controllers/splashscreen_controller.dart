@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kissan_connect/app/routes/app_pages.dart';
 
 class SplashScreenController extends GetxController {
@@ -18,10 +20,37 @@ class SplashScreenController extends GetxController {
     });
   }
 
+  Future<void> checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token != null && token.isNotEmpty) {
+      // User is logged in, check role
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        final role = userData['role'];
+
+        if (role == 'farmer') {
+          Get.offAllNamed('/farmerscreendashboard');
+        } else if (role == 'admin') {
+          Get.offAllNamed('/adminpanel');
+        } else if (role == 'super_admin') {
+          Get.offAllNamed('/superadminpanel');
+        } else {
+          Get.offAllNamed('/farmerscreendashboard');
+        }
+      } else {
+        // Fallback if user data missing but token exists
+        Get.offAllNamed('/farmerscreendashboard');
+      }
+    } else {
+      // Not logged in, go to language selection
+      Get.toNamed(Routes.SELECTLANGUAGE);
+    }
+  }
+
   void onComplete() {
-    Get.offAllNamed(
-      Routes.SELECTLANGUAGE,
-      arguments: null,
-    );
+    // Auto-navigation removed, waiting for user interaction
   }
 }

@@ -1,9 +1,7 @@
-import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:kissan_connect/app/modules/home/views/home_view.dart';
-import 'package:kissan_connect/app/modules/selectlanguage/views/selectlanguage_view.dart';
+import '../controllers/splashscreen_controller.dart';
 
 class SplashScreenView extends StatefulWidget {
   const SplashScreenView({super.key});
@@ -12,13 +10,13 @@ class SplashScreenView extends StatefulWidget {
   State<SplashScreenView> createState() => _SplashScreenViewState();
 }
 
-class _SplashScreenViewState extends State<SplashScreenView> 
+class _SplashScreenViewState extends State<SplashScreenView>
     with TickerProviderStateMixin {
   late AnimationController _mainController;
   late AnimationController _logoController;
   late AnimationController _particleController;
   late AnimationController _breatheController;
-  
+
   late Animation<double> _logoScaleAnimation;
   late Animation<double> _logoFadeAnimation;
   late Animation<double> _logoRotateAnimation;
@@ -31,17 +29,19 @@ class _SplashScreenViewState extends State<SplashScreenView>
   @override
   void initState() {
     super.initState();
-    
+
     // Main animation controller (4 seconds)
     _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4000),
+      duration: const Duration(milliseconds: 5000),
     );
 
     // Logo scale animation controller - Slower animation
     _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000), // Increased from 1500 to 2500ms
+      duration: const Duration(
+        milliseconds: 2000,
+      ), // Increased from 1500 to 2500ms
     )..forward();
 
     // Particle effect controller
@@ -60,34 +60,27 @@ class _SplashScreenViewState extends State<SplashScreenView>
     _logoScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _logoController,
-        curve: Curves.easeOutCubic, // Changed from elasticOut to easeOutCubic for smoother motion
+        curve: Curves
+            .easeOutCubic, // Changed from elasticOut to easeOutCubic for smoother motion
       ),
     );
 
     // Fade in animation
-    _logoFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _logoController,
-        curve: Curves.easeIn,
-      ),
-    );
+    _logoFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeIn));
 
     // Simple rotation (subtle)
     _logoRotateAnimation = Tween<double>(begin: -0.1, end: 0.1).animate(
-      CurvedAnimation(
-        parent: _breatheController,
-        curve: Curves.easeInOutSine,
-      ),
+      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOutSine),
     );
 
     // Simple slide up
-    _logoSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _logoController,
-      curve: Curves.easeOutCubic,
-    ));
+    _logoSlideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _logoController, curve: Curves.easeOutCubic),
+        );
 
     // Text animations
     _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -97,41 +90,27 @@ class _SplashScreenViewState extends State<SplashScreenView>
       ),
     );
 
-    _textSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
-    ));
+    _textSlideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _mainController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
+          ),
+        );
 
     // Glow pulse animation
     _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _breatheController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
     );
 
     // Breathing scale animation
     _breatheAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(
-        parent: _breatheController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
     );
 
     // Start animations
     _mainController.forward();
-    
-    // Navigate to home after 4 seconds
-    Timer(const Duration(seconds: 5), () {
-      Get.offAll(
-        () => SelectlanguageView(),
-        transition: Transition.fadeIn,
-        duration: const Duration(milliseconds: 1000),
-      );
-    });
+    // Removed auto redirection. Navigation will occur on Get Started button tap.
   }
 
   @override
@@ -188,8 +167,12 @@ class _SplashScreenViewState extends State<SplashScreenView>
                       color: Colors.green.withOpacity(0.1),
                     ),
                     _buildFloatingOrb(
-                      bottom: 150 + (40 * sin(_particleController.value * 2 * pi + pi)),
-                      right: 60 + (25 * cos(_particleController.value * 2 * pi + pi)),
+                      bottom:
+                          150 +
+                          (40 * sin(_particleController.value * 2 * pi + pi)),
+                      right:
+                          60 +
+                          (25 * cos(_particleController.value * 2 * pi + pi)),
                       size: 120,
                       color: Colors.amber.withOpacity(0.1),
                     ),
@@ -215,7 +198,8 @@ class _SplashScreenViewState extends State<SplashScreenView>
                           AnimatedBuilder(
                             animation: _breatheController,
                             builder: (context, child) {
-                              final scale = 1.0 + (0.1 * _breatheController.value);
+                              final scale =
+                                  1.0 + (0.1 * _breatheController.value);
                               return Transform.scale(
                                 scale: scale,
                                 child: Container(
@@ -235,7 +219,7 @@ class _SplashScreenViewState extends State<SplashScreenView>
                               );
                             },
                           ),
-                          
+
                           // Main logo with subtle scale animation
                           Hero(
                             tag: 'app-logo',
@@ -314,16 +298,17 @@ class _SplashScreenViewState extends State<SplashScreenView>
                               );
                             },
                           ),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           // Tagline with shimmer
                           AnimatedBuilder(
                             animation: _mainController,
                             builder: (context, child) {
                               return Opacity(
-                                opacity: _mainController.value > 0.5 
-                                    ? (((_mainController.value - 0.5) * 2).clamp(0.0, 1.0))
+                                opacity: _mainController.value > 0.5
+                                    ? (((_mainController.value - 0.5) * 2)
+                                          .clamp(0.0, 1.0))
                                     : 0.0,
                                 child: const Text(
                                   'Cultivating Connections, Growing Together',
@@ -342,9 +327,43 @@ class _SplashScreenViewState extends State<SplashScreenView>
                       ),
                     ),
                   ),
-
-                  // Removed the bottom three dots loading indicator
                 ],
+              ),
+            ),
+
+            // Get Started Button at bottom
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 32,
+              child: SafeArea(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final controller = Get.find<SplashScreenController>();
+                      controller.checkLoginStatus();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                      shadowColor: const Color(0xFF2E7D32).withOpacity(0.4),
+                    ),
+                    child: const Text(
+                      'Get Started',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -371,12 +390,7 @@ class _SplashScreenViewState extends State<SplashScreenView>
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              color,
-              color.withOpacity(0.0),
-            ],
-          ),
+          gradient: RadialGradient(colors: [color, color.withOpacity(0.0)]),
         ),
       ),
     );
@@ -399,7 +413,9 @@ class ParticlePainter extends CustomPainter {
         particleSpeeds.add(0.5 + random.nextDouble() * 2.0);
         particleRadii.add(1.0 + random.nextDouble() * 2.0);
         particleColors.add(
-          (i % 2 == 0 ? Colors.green : Colors.amber).withOpacity(0.1 + random.nextDouble() * 0.3),
+          (i % 2 == 0 ? Colors.green : Colors.amber).withOpacity(
+            0.1 + random.nextDouble() * 0.3,
+          ),
         );
       }
     }
@@ -408,30 +424,27 @@ class ParticlePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
-    
+
     for (int i = 0; i < 30; i++) {
       // Calculate particle position based on animation value and speed
       final progress = (animationValue * particleSpeeds[i]) % 1.0;
       final x = random.nextDouble() * size.width;
-      final y = (random.nextDouble() * size.height + 
-          progress * size.height * 0.5) % size.height;
-      
+      final y =
+          (random.nextDouble() * size.height + progress * size.height * 0.5) %
+          size.height;
+
       // Update particle position
       particlePositions[i] = Offset(x, y);
-      
+
       // Calculate opacity based on animation
       final opacity = 0.1 + (0.3 * sin(progress * pi));
-      
+
       // Draw particle
       paint.color = particleColors[i].withOpacity(
         particleColors[i].opacity * opacity,
       );
-      
-      canvas.drawCircle(
-        particlePositions[i],
-        particleRadii[i],
-        paint,
-      );
+
+      canvas.drawCircle(particlePositions[i], particleRadii[i], paint);
     }
   }
 

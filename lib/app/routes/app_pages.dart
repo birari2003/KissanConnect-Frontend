@@ -6,10 +6,10 @@ import '../modules/farmerscreendashboard/bindings/farmerscreendashboard_binding.
 import '../modules/farmerscreendashboard/views/farmerscreendashboard_view.dart';
 import '../modules/farmerslist/bindings/farmerslist_binding.dart';
 import '../modules/farmerslist/views/farmerslist_view.dart';
-import '../modules/home/bindings/home_binding.dart';
-import '../modules/home/views/home_view.dart';
 import '../modules/loginsignup/bindings/loginsignup_binding.dart';
 import '../modules/loginsignup/views/loginsignup_view.dart';
+import '../modules/paymentgetway/bindings/paymentgetway_binding.dart';
+import '../modules/paymentgetway/views/paymentgetway_view.dart';
 import '../modules/selectlanguage/bindings/selectlanguage_binding.dart';
 import '../modules/selectlanguage/views/selectlanguage_view.dart';
 import '../modules/splashscreen/bindings/splashscreen_binding.dart';
@@ -24,14 +24,9 @@ part 'app_routes.dart';
 class AppPages {
   AppPages._();
 
-  static const INITIAL = Routes.ADMINPANEL;
+  static const INITIAL = Routes.SPLASHSCREEN;
 
   static final routes = [
-    GetPage(
-      name: _Paths.HOME,
-      page: () => const HomeView(),
-      binding: HomeBinding(),
-    ),
     GetPage(
       name: _Paths.SPLASHSCREEN,
       page: () => const SplashScreenView(),
@@ -71,6 +66,11 @@ class AppPages {
       name: _Paths.SUPERADMINPANEL,
       page: () => const SuperadminpanelView(),
       binding: SuperadminpanelBinding(),
+    ),
+    GetPage(
+      name: _Paths.PAYMENTGETWAY,
+      page: () => const PaymentgetwayView(),
+      binding: PaymentgetwayBinding(),
     ),
   ];
 }

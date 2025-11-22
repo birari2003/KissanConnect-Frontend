@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../../../services/adminServices.dart';
 
 class SuperAdmin {
   final String id;
@@ -12,16 +13,68 @@ class SuperAdmin {
     required this.level,
     required this.levelPath,
   });
+
+  // Factory constructor to create SuperAdmin from API response
+  factory SuperAdmin.fromJson(Map<String, dynamic> json) {
+    // Determine level based on what's set
+    String level;
+    String levelPath = 'Unknown';
+
+    final superAdminLevel = json['super_admin_level'] ?? '';
+
+    if (superAdminLevel == 'village') {
+      level = 'Village';
+    } else if (superAdminLevel == 'city' || superAdminLevel == 'taluka') {
+      level = 'City';
+    } else if (superAdminLevel == 'district') {
+      level = 'District';
+    } else if (superAdminLevel == 'state') {
+      level = 'State';
+    } else {
+      level = 'Unknown';
+    }
+
+    // Build level path from nested location objects
+    List<String> levels = [];
+
+    if (json['adminState'] != null) {
+      levels.add(json['adminState']['name']);
+    }
+
+    if (json['adminDistrict'] != null) {
+      levels.add(json['adminDistrict']['name']);
+    }
+
+    if (json['adminTaluka'] != null) {
+      levels.add(json['adminTaluka']['name']);
+    }
+
+    if (json['adminVillage'] != null) {
+      levels.add(json['adminVillage']['name']);
+    }
+
+    levelPath = levels.isNotEmpty ? levels.join(' > ') : 'Unknown';
+
+    return SuperAdmin(
+      id: json['id'].toString(),
+      name: json['name'] ?? 'Unknown',
+      level: level,
+      levelPath: levelPath,
+    );
+  }
 }
 
 class SuperadminlistController extends GetxController {
+  final AdminService _adminService = AdminService();
+
   // List of super admins
   final superAdmins = <SuperAdmin>[].obs;
 
   // Selected ids
   final selectedIds = <String>{}.obs;
 
-  // Loading state for sending
+  // Loading states
+  final isLoading = false.obs;
   final isSending = false.obs;
 
   @override
@@ -30,34 +83,30 @@ class SuperadminlistController extends GetxController {
     loadSuperAdmins();
   }
 
-  void loadSuperAdmins() {
-    // Mock data - replace with API integration
-    superAdmins.value = [
-      SuperAdmin(
-        id: 'sa1',
-        name: 'Mahesh Deshmukh',
-        level: 'City',
-        levelPath: 'Maharashtra > Pune > Kothrud',
-      ),
-      SuperAdmin(
-        id: 'sa2',
-        name: 'Suresh Patil',
-        level: 'District',
-        levelPath: 'Maharashtra > Nashik',
-      ),
-      SuperAdmin(
-        id: 'sa3',
-        name: 'Ramesh Kumar',
-        level: 'State',
-        levelPath: 'Gujarat',
-      ),
-      SuperAdmin(
-        id: 'sa4',
-        name: 'Prakash Yadav',
-        level: 'Village',
-        levelPath: 'Karnataka > Bangalore > Koramangala > 6th Block',
-      ),
-    ];
+  Future<void> loadSuperAdmins() async {
+    try {
+      isLoading.value = true;
+
+      // Fetch super admins from API
+      final data = await _adminService.getSuperAdmins();
+
+      // Convert API response to SuperAdmin objects
+      superAdmins.value = data
+          .map((json) => SuperAdmin.fromJson(json))
+          .toList();
+    } catch (e) {
+      print('Error loading super admins: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to load super admins: ${e.toString().replaceAll('Exception: ', '')}',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: Duration(seconds: 3),
+      );
+      // Keep empty list on error
+      superAdmins.value = [];
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   void toggleSelection(String id, bool? value) {
@@ -78,15 +127,42 @@ class SuperadminlistController extends GetxController {
 
   Future<void> sendMessageToSelected(String message) async {
     if (message.trim().isEmpty || selectedIds.isEmpty) {
-      Get.snackbar('Error', 'Select at least one super admin and enter a message');
+      Get.snackbar(
+        'Error',
+        'Select at least one super admin and enter a message',
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return;
     }
+
     isSending.value = true;
     try {
-      // TODO: Integrate with backend API for sending messages (email/WhatsApp etc.)
-      await Future.delayed(const Duration(milliseconds: 800));
-      Get.snackbar('Sent', 'Message sent to ${selectedIds.length} super admin(s)');
+      // Convert selected IDs to integers
+      final recipientIds = selectedIds.map((id) => int.parse(id)).toList();
+
+      // Call API to send message
+      await _adminService.addMessage(
+        message: message,
+        recipientIds: recipientIds,
+      );
+
+      Get.snackbar(
+        'Success',
+        'Message sent to ${selectedIds.length} super admin(s)',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
+        duration: Duration(seconds: 2),
+      );
       clearSelection();
+    } catch (e) {
+      print('Error sending message: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to send message: ${e.toString().replaceAll('Exception: ', '')}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
+        duration: Duration(seconds: 3),
+      );
     } finally {
       isSending.value = false;
     }

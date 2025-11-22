@@ -6,3 +6,14 @@ long press not it should be button
 admin can send image pdf and video when send whatsapp
 
 
+government scheme - new tab
+tab in admin panel, attache gr and message and send to super admin or farmers
+add phone icon
+crop claim - videos, by farmer
+
+
+farmer - design one form page to ask query... and its reply will occer in dashboard, 
+and in farmer dashboard see whatsapp message 
+
+crop sell
+see crop list

@@ -1,7 +1,10 @@
 import 'package:get/get.dart';
+import '../../../services/adminServices.dart';
+import 'package:http/http.dart' as http;
 
 class Farmer {
-  final String id;
+  final String id; // farmer_profile.id
+  final String userId; // user.id - needed for API calls
   final String name;
   final String contact;
   final String status; // 'pending', 'approved', 'rejected'
@@ -10,65 +13,127 @@ class Farmer {
 
   Farmer({
     required this.id,
+    required this.userId,
     required this.name,
     required this.contact,
     required this.status,
     this.isSuperAdmin = false,
     this.superAdminLevel,
   });
+
+  // Factory constructor to create Farmer from API response
+  factory Farmer.fromJson(Map<String, dynamic> json) {
+    // Check if user is a super admin
+    final userRole = json['user']?['role'] ?? '';
+    final isSuperAdmin = userRole == 'super_admin';
+
+    // Build super admin level text if they are a super admin
+    String? superAdminLevel;
+    if (isSuperAdmin) {
+      List<String> levels = [];
+      if (json['user']?['state_name'] != null) {
+        levels.add(json['user']['state_name']);
+      }
+      if (json['user']?['district_name'] != null) {
+        levels.add(json['user']['district_name']);
+      }
+      if (json['user']?['taluka_name'] != null) {
+        levels.add(json['user']['taluka_name']);
+      }
+      if (json['user']?['village_name'] != null) {
+        levels.add(json['user']['village_name']);
+      }
+      superAdminLevel = levels.isNotEmpty ? levels.join(' > ') : null;
+    }
+
+    return Farmer(
+      id: json['id'].toString(),
+      userId: json['user']?['id'].toString() ?? '0',
+      name: json['user']?['name'] ?? 'Unknown',
+      contact: json['user']?['phone'] ?? 'N/A',
+      status: json['request_status'] ?? 'pending',
+      isSuperAdmin: isSuperAdmin,
+      superAdminLevel: superAdminLevel,
+    );
+  }
 }
 
 class FarmerslistController extends GetxController {
+  final AdminService _adminService = AdminService();
+
   // Observable list of farmers
   final farmers = <Farmer>[].obs;
-  
+
+  // Loading state
+  final isLoading = false.obs;
+
   // Filter options
   final selectedFilter = 'all'.obs; // 'all', 'pending', 'approved', 'rejected'
-  
-  // Super admin assignment state
-  final selectedState = Rxn<String>();
-  final selectedDistrict = Rxn<String>();
-  final selectedCity = Rxn<String>();
-  final selectedVillage = Rxn<String>();
-  
-  // Location data (mock data - replace with API calls)
-  final states = <String>[
-    'Maharashtra',
-    'Gujarat',
-    'Karnataka',
-    'Tamil Nadu',
-    'Uttar Pradesh',
-  ].obs;
-  
-  final districts = <String, List<String>>{
-    'Maharashtra': ['Pune', 'Mumbai', 'Nagpur', 'Nashik', 'Aurangabad'],
-    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot'],
-    'Karnataka': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore'],
-    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli'],
-    'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Agra', 'Varanasi'],
-  };
-  
-  final cities = <String, List<String>>{
-    'Pune': ['Kothrud', 'Shivajinagar', 'Hadapsar', 'Wakad', 'Hinjewadi'],
-    'Mumbai': ['Andheri', 'Bandra', 'Borivali', 'Dadar', 'Thane'],
-    'Nagpur': ['Sitabuldi', 'Dharampeth', 'Sadar', 'Kamptee'],
-    'Ahmedabad': ['Satellite', 'Navrangpura', 'Maninagar', 'Vastrapur'],
-    'Bangalore': ['Koramangala', 'Indiranagar', 'Whitefield', 'Jayanagar'],
-  };
-  
-  final villages = <String, List<String>>{
-    'Kothrud': ['Karve Nagar', 'Paud Road', 'Mayur Colony', 'Dahanukar Colony'],
-    'Shivajinagar': ['Deccan', 'JM Road', 'Nal Stop', 'Shivaji Market'],
-    'Hadapsar': ['Magarpatta', 'Mundhwa', 'Wanowrie', 'Fatimanagar'],
-    'Andheri': ['Versova', 'Lokhandwala', 'Oshiwara', 'Chakala'],
-    'Koramangala': ['5th Block', '6th Block', '7th Block', '8th Block'],
-  };
+
+  // Super admin assignment state - store IDs
+  final selectedStateId = Rxn<String>();
+  final selectedDistrictId = Rxn<String>();
+  final selectedTalukaId = Rxn<String>();
+  final selectedVillageId = Rxn<String>();
+
+  // Super admin assignment state - store names for display
+  final selectedStateName = Rxn<String>();
+  final selectedDistrictName = Rxn<String>();
+  final selectedTalukaName = Rxn<String>();
+  final selectedVillageName = Rxn<String>();
+
+  // Location data from API
+  final states = <dynamic>[].obs;
+  final districts = <dynamic>[].obs;
+  final talukas = <dynamic>[].obs;
+  final villages = <dynamic>[].obs;
 
   @override
   void onInit() {
     super.onInit();
     loadFarmers();
+    _fetchStates();
   }
+
+  // Fetch states from API
+  Future<void> _fetchStates() async {
+    try {
+      final data = await _adminService.getStates();
+      states.value = data;
+    } catch (e) {
+      print('Error fetching states: $e');
+    }
+  }
+
+  // Fetch districts when state is selected
+  Future<void> _fetchDistricts(String stateId) async {
+    try {
+      districts.clear();
+      talukas.clear();
+      villages.clear();
+
+      final data = await _adminService.getDistrictsByState(stateId);
+      districts.value = data;
+    } catch (e) {
+      print('Error fetching districts: $e');
+    }
+  }
+
+  // Fetch talukas when district is selected
+  Future<void> _fetchTalukas(String districtId) async {
+    try {
+      talukas.clear();
+      villages.clear();
+
+      final data = await _adminService.getTalukasByDistrict(districtId);
+      talukas.value = data;
+    } catch (e) {
+      print('Error fetching talukas: $e');
+    }
+  }
+
+  // Note: Add getVillagesByTaluka API method to AdminService if available
+  // For now, villages will remain empty until that API is added
 
   @override
   void onReady() {
@@ -80,48 +145,69 @@ class FarmerslistController extends GetxController {
     super.onClose();
   }
 
-  void loadFarmers() {
-    // Mock data - replace with API call
-    farmers.value = [
-      Farmer(
-        id: '1',
-        name: 'Ramesh Kumar',
-        contact: '+91 9876543210',
-        status: 'pending',
-      ),
-      Farmer(
-        id: '2',
-        name: 'Suresh Patil',
-        contact: '+91 9876543211',
-        status: 'approved',
-      ),
-      Farmer(
-        id: '3',
-        name: 'Mahesh Deshmukh',
-        contact: '+91 9876543212',
-        status: 'approved',
-        isSuperAdmin: true,
-        superAdminLevel: 'Maharashtra > Pune > Kothrud',
-      ),
-      Farmer(
-        id: '4',
-        name: 'Ganesh Jadhav',
-        contact: '+91 9876543213',
-        status: 'rejected',
-      ),
-      Farmer(
-        id: '5',
-        name: 'Rajesh Sharma',
-        contact: '+91 9876543214',
-        status: 'pending',
-      ),
-      Farmer(
-        id: '6',
-        name: 'Prakash Yadav',
-        contact: '+91 9876543215',
-        status: 'approved',
-      ),
-    ];
+  Future<void> loadFarmers() async {
+    try {
+      isLoading.value = true;
+
+      List<Farmer> allFarmers = [];
+
+      // Fetch farmers from getFarmersList API (has all needed fields including id)
+      try {
+        final farmersData = await _adminService.getFarmersList();
+        final farmersList = farmersData
+            .map((json) => Farmer.fromJson(json))
+            .toList();
+        allFarmers.addAll(farmersList);
+      } catch (e) {
+        print('Error loading farmers list: $e');
+      }
+
+      // Fetch super admins from getAllUsers API
+      try {
+        final usersData = await _adminService.getAllUsers();
+
+        // Filter to get only super_admins
+        final superAdmins = usersData
+            .where((user) => user['role'] == 'super_admin')
+            .map((user) {
+              // Build super admin level text
+              String? superAdminLevel;
+              if (user['super_admin_level'] != null) {
+                superAdminLevel = user['super_admin_level'];
+              }
+
+              return Farmer(
+                id: user['id']?.toString() ?? '0',
+                userId: user['id']?.toString() ?? '0',
+                name: user['name'] ?? 'Unknown',
+                contact: user['phone'] ?? 'N/A',
+                status: 'approved', // Super admins are always approved
+                isSuperAdmin: true,
+                superAdminLevel: superAdminLevel,
+              );
+            })
+            .toList();
+
+        allFarmers.addAll(superAdmins);
+      } catch (e) {
+        print('Error loading super admins: $e');
+      }
+
+      farmers.value = allFarmers;
+    } catch (e) {
+      print('Error loading farmers: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to load farmers: ${e.toString().replaceAll('Exception: ', '')}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
+        duration: Duration(seconds: 3),
+      );
+      // Keep empty list on error
+      farmers.value = [];
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   List<Farmer> get filteredFarmers {
@@ -131,18 +217,60 @@ class FarmerslistController extends GetxController {
     return farmers.where((f) => f.status == selectedFilter.value).toList();
   }
 
-  void approveFarmer(String farmerId) {
-    final index = farmers.indexWhere((f) => f.id == farmerId);
-    if (index != -1) {
-      farmers[index] = Farmer(
-        id: farmers[index].id,
-        name: farmers[index].name,
-        contact: farmers[index].contact,
-        status: 'approved',
-        isSuperAdmin: farmers[index].isSuperAdmin,
-        superAdminLevel: farmers[index].superAdminLevel,
+  // Send WhatsApp message using TextMeBot API
+  Future<void> sendWhatsAppMessage(String phoneNumber, String message) async {
+    try {
+      final apiKey = 'QNVVTKKBVyqC'; // Your TextMeBot API key
+      final encodedMessage = Uri.encodeComponent(message);
+      final url = Uri.parse(
+        'http://api.textmebot.com/send.php?recipient=+91$phoneNumber&apikey=$apiKey&text=$encodedMessage',
       );
-      farmers.refresh();
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        print('WhatsApp message sent successfully to $phoneNumber');
+      } else {
+        print('Failed to send WhatsApp message: ${response.body}');
+      }
+    } catch (e) {
+      print('Error sending WhatsApp message: $e');
+    }
+  }
+
+  Future<void> approveFarmer(String farmerId) async {
+    try {
+      // Find the farmer to get the userId
+      final farmer = farmers.firstWhere((f) => f.id == farmerId);
+
+      print('Approving farmer: farmerId=$farmerId, userId=${farmer.userId}');
+
+      // Call API to approve farmer using userId
+      await _adminService.updateFarmerStatus(
+        userId: int.parse(farmer.userId),
+        status: 'approved',
+      );
+
+      // Send WhatsApp notification
+      final message =
+          'Congratulations! Your farmer registration has been approved. You can now access all features of KissanConnect.';
+      await sendWhatsAppMessage(farmer.contact, message);
+
+      // Update local state
+      final index = farmers.indexWhere((f) => f.id == farmerId);
+      if (index != -1) {
+        farmers[index] = Farmer(
+          id: farmers[index].id,
+          userId: farmers[index].userId,
+          name: farmers[index].name,
+          contact: farmers[index].contact,
+          status: 'approved',
+          isSuperAdmin: farmers[index].isSuperAdmin,
+          superAdminLevel: farmers[index].superAdminLevel,
+        );
+        farmers.refresh();
+      }
+
       Get.snackbar(
         'Success',
         'Farmer approved successfully',
@@ -150,21 +278,50 @@ class FarmerslistController extends GetxController {
         backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
         duration: Duration(seconds: 2),
       );
+    } catch (e) {
+      print('Error approving farmer: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to approve farmer: ${e.toString().replaceAll('Exception: ', '')}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
+        duration: Duration(seconds: 3),
+      );
     }
   }
 
-  void rejectFarmer(String farmerId) {
-    final index = farmers.indexWhere((f) => f.id == farmerId);
-    if (index != -1) {
-      farmers[index] = Farmer(
-        id: farmers[index].id,
-        name: farmers[index].name,
-        contact: farmers[index].contact,
+  Future<void> rejectFarmer(String farmerId) async {
+    try {
+      // Find the farmer to get the userId
+      final farmer = farmers.firstWhere((f) => f.id == farmerId);
+
+      // Call API to reject farmer using userId
+      await _adminService.updateFarmerStatus(
+        userId: int.parse(farmer.userId),
         status: 'rejected',
-        isSuperAdmin: false,
-        superAdminLevel: null,
+        rejectionReason: 'Rejected by admin',
       );
-      farmers.refresh();
+
+      // Send WhatsApp notification
+      final message =
+          'We regret to inform you that your farmer registration has been rejected. Please contact the admin for more information.';
+      await sendWhatsAppMessage(farmer.contact, message);
+
+      // Update local state
+      final index = farmers.indexWhere((f) => f.id == farmerId);
+      if (index != -1) {
+        farmers[index] = Farmer(
+          id: farmers[index].id,
+          userId: farmers[index].userId,
+          name: farmers[index].name,
+          contact: farmers[index].contact,
+          status: 'rejected',
+          isSuperAdmin: false,
+          superAdminLevel: null,
+        );
+        farmers.refresh();
+      }
+
       Get.snackbar(
         'Success',
         'Farmer rejected',
@@ -172,42 +329,101 @@ class FarmerslistController extends GetxController {
         backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
         duration: Duration(seconds: 2),
       );
+    } catch (e) {
+      print('Error rejecting farmer: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to reject farmer: ${e.toString().replaceAll('Exception: ', '')}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
+        duration: Duration(seconds: 3),
+      );
     }
   }
 
   void resetSuperAdminSelection() {
-    selectedState.value = null;
-    selectedDistrict.value = null;
-    selectedCity.value = null;
-    selectedVillage.value = null;
+    selectedStateId.value = null;
+    selectedDistrictId.value = null;
+    selectedTalukaId.value = null;
+    selectedVillageId.value = null;
+    selectedStateName.value = null;
+    selectedDistrictName.value = null;
+    selectedTalukaName.value = null;
+    selectedVillageName.value = null;
+    districts.clear();
+    talukas.clear();
+    villages.clear();
   }
 
-  List<String> getDistricts() {
-    if (selectedState.value == null) return [];
-    return districts[selectedState.value] ?? [];
+  // Called when state is selected
+  void onStateSelected(String? stateId, String? stateName) {
+    selectedStateId.value = stateId;
+    selectedStateName.value = stateName;
+    selectedDistrictId.value = null;
+    selectedTalukaId.value = null;
+    selectedVillageId.value = null;
+    selectedDistrictName.value = null;
+    selectedTalukaName.value = null;
+    selectedVillageName.value = null;
+
+    if (stateId != null) {
+      _fetchDistricts(stateId);
+    } else {
+      districts.clear();
+      talukas.clear();
+      villages.clear();
+    }
   }
 
-  List<String> getCities() {
-    if (selectedDistrict.value == null) return [];
-    return cities[selectedDistrict.value] ?? [];
+  // Called when district is selected
+  void onDistrictSelected(String? districtId, String? districtName) {
+    selectedDistrictId.value = districtId;
+    selectedDistrictName.value = districtName;
+    selectedTalukaId.value = null;
+    selectedVillageId.value = null;
+    selectedTalukaName.value = null;
+    selectedVillageName.value = null;
+
+    if (districtId != null) {
+      _fetchTalukas(districtId);
+    } else {
+      talukas.clear();
+      villages.clear();
+    }
   }
 
-  List<String> getVillages() {
-    if (selectedCity.value == null) return [];
-    return villages[selectedCity.value] ?? [];
+  // Called when taluka is selected
+  void onTalukaSelected(String? talukaId, String? talukaName) {
+    selectedTalukaId.value = talukaId;
+    selectedTalukaName.value = talukaName;
+    selectedVillageId.value = null;
+    selectedVillageName.value = null;
+
+    // TODO: Fetch villages when API is available
+    // if (talukaId != null) {
+    //   _fetchVillages(talukaId);
+    // }
+  }
+
+  // Called when village is selected
+  void onVillageSelected(String? villageId, String? villageName) {
+    selectedVillageId.value = villageId;
+    selectedVillageName.value = villageName;
   }
 
   String getSuperAdminLevelText() {
     List<String> levels = [];
-    if (selectedState.value != null) levels.add(selectedState.value!);
-    if (selectedDistrict.value != null) levels.add(selectedDistrict.value!);
-    if (selectedCity.value != null) levels.add(selectedCity.value!);
-    if (selectedVillage.value != null) levels.add(selectedVillage.value!);
+    if (selectedStateName.value != null) levels.add(selectedStateName.value!);
+    if (selectedDistrictName.value != null)
+      levels.add(selectedDistrictName.value!);
+    if (selectedTalukaName.value != null) levels.add(selectedTalukaName.value!);
+    if (selectedVillageName.value != null)
+      levels.add(selectedVillageName.value!);
     return levels.isEmpty ? 'No level selected' : levels.join(' > ');
   }
 
-  void assignSuperAdmin(String farmerId) {
-    if (selectedState.value == null) {
+  Future<void> assignSuperAdmin(String farmerId) async {
+    if (selectedStateId.value == null) {
       Get.snackbar(
         'Error',
         'Please select at least a state',
@@ -217,25 +433,71 @@ class FarmerslistController extends GetxController {
       return;
     }
 
-    final index = farmers.indexWhere((f) => f.id == farmerId);
-    if (index != -1) {
-      farmers[index] = Farmer(
-        id: farmers[index].id,
-        name: farmers[index].name,
-        contact: farmers[index].contact,
-        status: farmers[index].status,
-        isSuperAdmin: true,
-        superAdminLevel: getSuperAdminLevelText(),
+    try {
+      // Find the farmer to get the userId
+      final farmer = farmers.firstWhere((f) => f.id == farmerId);
+
+      // Determine the level based on what's selected
+      String level;
+      if (selectedVillageId.value != null) {
+        level = 'village';
+      } else if (selectedTalukaId.value != null) {
+        level = 'city'; // Backend uses 'city' for taluka
+      } else if (selectedDistrictId.value != null) {
+        level = 'district';
+      } else {
+        level = 'state';
+      }
+
+      // Call API to assign super admin using userId
+      await _adminService.assignSuperAdmin(
+        userId: int.parse(farmer.userId),
+        level: level,
+        stateId: selectedStateId.value,
+        districtId: selectedDistrictId.value,
+        talukaId: selectedTalukaId.value,
+        villageId: selectedVillageId.value,
       );
-      farmers.refresh();
+
+      // Send WhatsApp notification about super admin assignment
+      String locationInfo = getSuperAdminLevelText();
+      final whatsappMessage =
+          'Congratulations! You have been appointed as a Super Admin for $locationInfo. You now have administrative privileges for this region in KissanConnect.';
+      await sendWhatsAppMessage(farmer.contact, whatsappMessage);
+
+      // Update local state
+      final index = farmers.indexWhere((f) => f.id == farmerId);
+      if (index != -1) {
+        farmers[index] = Farmer(
+          id: farmers[index].id,
+          userId: farmers[index].userId,
+          name: farmers[index].name,
+          contact: farmers[index].contact,
+          status: farmers[index].status,
+          isSuperAdmin: true,
+          superAdminLevel: getSuperAdminLevelText(),
+        );
+        farmers.refresh();
+      }
+
       resetSuperAdminSelection();
       Get.back(); // Close bottom sheet
+
       Get.snackbar(
         'Success',
-        '${farmers[index].name} assigned as Super Admin',
+        'Super Admin assigned successfully',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
         duration: Duration(seconds: 2),
+      );
+    } catch (e) {
+      print('Error assigning super admin: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to assign super admin: ${e.toString().replaceAll('Exception: ', '')}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
+        duration: Duration(seconds: 3),
       );
     }
   }

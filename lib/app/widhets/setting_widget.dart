@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../routes/app_pages.dart';
 
 class SettingsWidget extends StatefulWidget {
   final String selectedLanguage;
@@ -33,7 +34,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     setState(() {
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
       _darkModeEnabled = prefs.getBool('dark_mode_enabled') ?? false;
-      _selectedLanguage = prefs.getString('language') ?? widget.selectedLanguage;
+      _selectedLanguage =
+          prefs.getString('language') ?? widget.selectedLanguage;
     });
   }
 
@@ -87,24 +89,26 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     );
 
     if (shouldLogout == true) {
-      // Clear user data
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('userId');
-      await prefs.remove('token');
-      await prefs.remove('isLoggedIn');
+      try {
+        // Clear all user data
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
 
-      if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Logged out successfully'),
+        if (mounted) {
+          // Navigate to login screen
+          Get.offAllNamed('/loginsignup');
+
+          Get.snackbar(
+            'Success',
+            'Logged out successfully',
             backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigate to login screen
-        // Replace with your actual login route
-        Get.offAllNamed('/auth');
+            colorText: Colors.white,
+            snackPosition: SnackPosition.BOTTOM,
+            margin: const EdgeInsets.all(16),
+          );
+        }
+      } catch (e) {
+        print('Error during logout: $e');
       }
     }
   }
@@ -172,10 +176,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF2E8B57),
-                const Color(0xFF5CC96F),
-              ],
+              colors: [const Color(0xFF2E8B57), const Color(0xFF5CC96F)],
             ),
           ),
         ),
@@ -204,18 +205,11 @@ class _SettingsWidgetState extends State<SettingsWidget> {
             height: 70,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF2E8B57),
-                  const Color(0xFF5CC96F),
-                ],
+                colors: [const Color(0xFF2E8B57), const Color(0xFF5CC96F)],
               ),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 40,
-            ),
+            child: const Icon(Icons.person, color: Colors.white, size: 40),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -372,6 +366,16 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                   _showAboutDialog();
                 },
               ),
+              const Divider(height: 1),
+              _buildSettingTile(
+                icon: Icons.payment,
+                title: 'Make Payment',
+                subtitle: 'Proceed to payment gateway',
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Get.toNamed(Routes.PAYMENTGETWAY);
+                },
+              ),
             ],
           ),
         ),
@@ -446,10 +450,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
             SizedBox(width: 12),
             Text(
               'Logout',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -512,13 +513,13 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About KisaanConnect'),
+        title: const Text('About Smart Shetkari'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'KisaanConnect',
+              'Smart Shetkari',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -533,7 +534,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
             ),
             const SizedBox(height: 16),
             const Text(
-              '© 2024 KisaanConnect. All rights reserved.',
+              '© 2024 Smart Shetkari. All rights reserved.',
               style: TextStyle(fontSize: 12),
             ),
           ],

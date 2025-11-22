@@ -1,69 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../services/sendEmailService.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
+import '../utils/ui_utils.dart';
 
 class SendEmailController extends GetxController {
   // Toggle between Send Email and Generate Email with AI
   final selectedTab = 0.obs; // 0 = Send Email, 1 = Generate with AI
 
-  // Location filters
-  final selectedState = Rxn<String>();
-  final selectedDistrict = Rxn<String>();
-  final selectedCity = Rxn<String>();
-  final selectedVillage = Rxn<String>();
-
   // Email fields
-  final fromEmail = 'gov@gmail.com';
+  final toEmailController = TextEditingController();
+  final subjectController = TextEditingController();
   final messageController = TextEditingController();
+
+  // Verified Brevo senders (choose one as the From address)
+  final availableSenders = <String>[
+    'gauravbirari690@gmail.com',
+    'gauravbirari07@gmail.com',
+  ].obs;
+  // Multi-select of senders
+  final selectedSenders = <String>[].obs;
 
   // AI Chat
   final chatMessages = <ChatMessage>[].obs;
   final aiMessageController = TextEditingController();
   final isGenerating = false.obs;
 
-  // Mock location data
-  final states = <String>[
-    'Maharashtra',
-    'Gujarat',
-    'Karnataka',
-    'Tamil Nadu',
-    'Uttar Pradesh',
-  ].obs;
+  // Speech to Text
+  late stt.SpeechToText _speech;
+  final isListening = false.obs;
+  final isListeningSubject = false.obs;
+  final isListeningMessage = false.obs;
+  final isListeningAI = false.obs;
 
-  final districts = <String, List<String>>{
-    'Maharashtra': ['Pune', 'Mumbai', 'Nagpur', 'Nashik', 'Aurangabad'],
-    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot'],
-    'Karnataka': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore'],
-    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli'],
-    'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Agra', 'Varanasi'],
-  };
-
-  final cities = <String, List<String>>{
-    'Pune': ['Kothrud', 'Shivajinagar', 'Hadapsar', 'Wakad', 'Hinjewadi'],
-    'Mumbai': ['Andheri', 'Bandra', 'Borivali', 'Dadar', 'Thane'],
-    'Nagpur': ['Sitabuldi', 'Dharampeth', 'Sadar', 'Kamptee'],
-    'Ahmedabad': ['Satellite', 'Navrangpura', 'Maninagar', 'Vastrapur'],
-    'Bangalore': ['Koramangala', 'Indiranagar', 'Whitefield', 'Jayanagar'],
-  };
-
-  final villages = <String, List<String>>{
-    'Kothrud': ['Karve Nagar', 'Paud Road', 'Mayur Colony', 'Dahanukar Colony'],
-    'Shivajinagar': ['Deccan', 'JM Road', 'Nal Stop', 'Shivaji Market'],
-    'Hadapsar': ['Magarpatta', 'Mundhwa', 'Wanowrie', 'Fatimanagar'],
-    'Andheri': ['Versova', 'Lokhandwala', 'Oshiwara', 'Chakala'],
-    'Koramangala': ['5th Block', '6th Block', '7th Block', '8th Block'],
-  };
-
-  // Mock farmer counts by location
-  final farmerCounts = {
-    'total': 20,
-    'Maharashtra': 15,
-    'Pune': 10,
-    'Kothrud': 5,
-    'Karve Nagar': 2,
-  };
+  @override
+  void onInit() {
+    super.onInit();
+    _speech = stt.SpeechToText();
+  }
 
   @override
   void onClose() {
+    toEmailController.dispose();
+    subjectController.dispose();
     messageController.dispose();
     aiMessageController.dispose();
     super.onClose();
@@ -73,57 +55,23 @@ class SendEmailController extends GetxController {
     selectedTab.value = index;
   }
 
-  List<String> getDistricts() {
-    if (selectedState.value == null) return [];
-    return districts[selectedState.value] ?? [];
-  }
-
-  List<String> getCities() {
-    if (selectedDistrict.value == null) return [];
-    return cities[selectedDistrict.value] ?? [];
-  }
-
-  List<String> getVillages() {
-    if (selectedCity.value == null) return [];
-    return villages[selectedCity.value] ?? [];
-  }
-
-  int getFilteredFarmerCount() {
-    if (selectedVillage.value != null) {
-      return farmerCounts[selectedVillage.value] ?? 1;
-    }
-    if (selectedCity.value != null) {
-      return farmerCounts[selectedCity.value] ?? 3;
-    }
-    if (selectedDistrict.value != null) {
-      return farmerCounts[selectedDistrict.value] ?? 8;
-    }
-    if (selectedState.value != null) {
-      return farmerCounts[selectedState.value] ?? 12;
-    }
-    return farmerCounts['total'] ?? 20;
-  }
-
-  String getLocationPath() {
-    List<String> path = [];
-    if (selectedState.value != null) path.add(selectedState.value!);
-    if (selectedDistrict.value != null) path.add(selectedDistrict.value!);
-    if (selectedCity.value != null) path.add(selectedCity.value!);
-    if (selectedVillage.value != null) path.add(selectedVillage.value!);
-    return path.isEmpty ? 'All Locations' : path.join(' > ');
-  }
-
-  void resetLocationFilters() {
-    selectedState.value = null;
-    selectedDistrict.value = null;
-    selectedCity.value = null;
-    selectedVillage.value = null;
-  }
-
   Future<void> sendEmail() async {
+    final toEmail = toEmailController.text.trim();
+    final subject = subjectController.text.trim();
     final message = messageController.text.trim();
+
+    if (toEmail.isEmpty) {
+      UiUtils.showErrorSnackbar('Error', 'Please enter recipient email');
+      return;
+    }
+
+    if (subject.isEmpty) {
+      UiUtils.showErrorSnackbar('Error', 'Please enter subject');
+      return;
+    }
+
     if (message.isEmpty) {
-      Get.snackbar('Error', 'Please enter a message');
+      UiUtils.showErrorSnackbar('Error', 'Please enter a message');
       return;
     }
 
@@ -133,24 +81,44 @@ class SendEmailController extends GetxController {
     );
 
     try {
-      // TODO: Integrate with backend API to send email
-      await Future.delayed(Duration(seconds: 1));
+      // Choose all selected senders; if none selected, default to the first available sender
+      final senders = selectedSenders.isEmpty
+          ? [availableSenders.first]
+          : List<String>.from(selectedSenders);
+
+      bool allSuccess = true;
+      for (final sender in senders) {
+        final ok = await EmailService.sendEmail(
+          toEmail: toEmail,
+          subject: subject,
+          message: message,
+          senderEmail: sender,
+          senderName: 'Smart Shetkari',
+        );
+        if (!ok) allSuccess = false;
+      }
+
       Get.back(); // Close loading
-      Get.snackbar(
-        'Success',
-        'Email sent to ${getFilteredFarmerCount()} farmers',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Color(0xFF7BB53B).withOpacity(0.1),
-      );
-      messageController.clear();
+
+      if (allSuccess) {
+        UiUtils.showSuccessSnackbar('Success', 'Email sent successfully to $toEmail');
+        toEmailController.clear();
+        subjectController.clear();
+        messageController.clear();
+      } else {
+        UiUtils.showErrorSnackbar('Error', 'One or more emails failed to send. Please check logs.');
+      }
     } catch (e) {
       Get.back();
-      Get.snackbar('Error', 'Failed to send email');
+      UiUtils.showErrorSnackbar('Error', 'Failed to send email: $e');
     }
   }
 
   Future<void> generateEmailWithAI(String prompt) async {
     if (prompt.trim().isEmpty) return;
+
+    const apiKey = '37cc701d-6e56-4ced-b116-d8a482f16b7c';
+    final url = Uri.parse('https://api.sambanova.ai/v1/chat/completions');
 
     // Add user message
     chatMessages.add(ChatMessage(text: prompt, isUser: true));
@@ -158,29 +126,39 @@ class SendEmailController extends GetxController {
     isGenerating.value = true;
 
     try {
-      // TODO: Integrate with Gemini API
-      await Future.delayed(Duration(seconds: 2));
-      
-      // Mock AI response
-      final aiResponse = '''Subject: Important Update for Farmers
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'stream': false,
+          'model': 'DeepSeek-V3.1-Terminus',
+          'messages': [
+            {
+              'role': 'system',
+              'content': 'You are a helpful assistant that helps write professional emails. Generate concise, clear email content based on the user\'s prompts.'
+            },
+            {'role': 'user', 'content': prompt},
+          ],
+        }),
+      );
 
-Dear Farmers,
-
-We hope this message finds you well. We are writing to inform you about the upcoming agricultural initiatives and support programs available in your region.
-
-Key Points:
-• New subsidy schemes for crop insurance
-• Training programs on modern farming techniques
-• Access to quality seeds and fertilizers at subsidized rates
-
-Please feel free to reach out for more information.
-
-Best regards,
-Government Agricultural Department''';
-
-      chatMessages.add(ChatMessage(text: aiResponse, isUser: false));
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final aiResponse = responseData['choices'][0]['message']['content'];
+        
+        chatMessages.add(ChatMessage(text: aiResponse, isUser: false));
+      } else {
+        throw Exception('Failed to get response from DeepSeek API: ${response.statusCode}');
+      }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to generate email');
+      chatMessages.add(ChatMessage(
+        text: 'Sorry, I encountered an error. Please try again.',
+        isUser: false,
+      ));
+      UiUtils.showErrorSnackbar('Error', 'Failed to generate email: $e');
     } finally {
       isGenerating.value = false;
     }
@@ -188,7 +166,48 @@ Government Agricultural Department''';
 
   void copyToClipboard(String text) {
     // TODO: Implement clipboard copy
-    Get.snackbar('Copied', 'Email content copied to clipboard');
+    UiUtils.showSuccessSnackbar('Copied', 'Email content copied to clipboard');
+  }
+
+  Future<void> startListening(TextEditingController controller, RxBool listeningState) async {
+    // Request microphone permission
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      UiUtils.showErrorSnackbar('Permission Denied', 'Microphone permission is required for voice input');
+      return;
+    }
+
+    bool available = await _speech.initialize(
+      onStatus: (status) {
+        if (status == 'done' || status == 'notListening') {
+          listeningState.value = false;
+        }
+      },
+      onError: (error) {
+        listeningState.value = false;
+        UiUtils.showErrorSnackbar('Error', 'Voice recognition error: ${error.errorMsg}');
+      },
+    );
+
+    if (available) {
+      listeningState.value = true;
+      _speech.listen(
+        onResult: (result) {
+          controller.text = result.recognizedWords;
+        },
+        listenFor: Duration(seconds: 30),
+        pauseFor: Duration(seconds: 3),
+        partialResults: true,
+        localeId: 'en_US',
+      );
+    } else {
+      UiUtils.showErrorSnackbar('Error', 'Speech recognition not available');
+    }
+  }
+
+  void stopListening(RxBool listeningState) {
+    _speech.stop();
+    listeningState.value = false;
   }
 }
 
@@ -299,7 +318,7 @@ class SendEmailWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // From section with location filter
+          // From (sender)
           Container(
             padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -316,84 +335,47 @@ class SendEmailWidget extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Icon(Icons.filter_list, color: Color(0xFF2A6E9B)),
-    SizedBox(width: 8),
-    Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Filter Recipients',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2A6E9B),
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          "From",
-          style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF2A6E9B),
-          ),
-        ),
-      ],
-    ),
-    Spacer(), // This will push the icon to the right
-  ],
-),
-                SizedBox(height: 16),
-                _buildLocationDropdowns(controller),
-                SizedBox(height: 16),
-                Obx(() => Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF7BB53B).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Color(0xFF7BB53B).withOpacity(0.3)),
+                Text(
+                  'From (verified sender)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2A6E9B),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.people, color: Color(0xFF7BB53B), size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${controller.getFilteredFarmerCount()} Farmers Selected',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF2A6E9B),
-                              ),
+                ),
+                SizedBox(height: 12),
+                Obx(() => Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: controller.availableSenders.map((email) {
+                        final isSelected = controller.selectedSenders.contains(email);
+                        return FilterChip(
+                          label: ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: 220),
+                            child: Text(
+                              email,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            Text(
-                              controller.getLocationPath(),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (controller.selectedState.value != null)
-                        IconButton(
-                          icon: Icon(Icons.clear, size: 20),
-                          onPressed: controller.resetLocationFilters,
-                          color: Colors.grey[600],
-                        ),
-                    ],
-                  ),
-                )),
+                          ),
+                          selected: isSelected,
+                          onSelected: (val) {
+                            if (val) {
+                              controller.selectedSenders.add(email);
+                            } else {
+                              controller.selectedSenders.remove(email);
+                            }
+                          },
+                          selectedColor: const Color(0xFF7BB53B).withOpacity(0.2),
+                          checkmarkColor: const Color(0xFF7BB53B),
+                          avatar: const Icon(Icons.account_circle, size: 18, color: Color(0xFF7BB53B)),
+                        );
+                      }).toList(),
+                    )),
               ],
             ),
           ),
           SizedBox(height: 16),
-          // From Email (constant)
+          // To Email
           Container(
             padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -407,30 +389,100 @@ class SendEmailWidget extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.mail_outline, color: Color(0xFF2A6E9B)),
-                SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'To',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    Text(
-                      controller.fromEmail,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2A6E9B),
-                      ),
-                    ),
-                  ],
+                Text(
+                  'To Email',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2A6E9B),
+                  ),
                 ),
+                SizedBox(height: 12),
+                TextField(
+                  controller: controller.toEmailController,
+                  decoration: InputDecoration(
+                    hintText: 'recipient@example.com',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF7BB53B), width: 2),
+                    ),
+                    prefixIcon: Icon(Icons.mail_outline, color: Color(0xFF7BB53B)),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16),
+          // Subject
+          Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Subject',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2A6E9B),
+                  ),
+                ),
+                SizedBox(height: 12),
+                Obx(() => TextField(
+                  controller: controller.subjectController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter subject...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF7BB53B), width: 2),
+                    ),
+                    prefixIcon: Icon(Icons.subject, color: Color(0xFF7BB53B)),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        controller.isListeningSubject.value ? Icons.mic : Icons.mic_none,
+                        color: controller.isListeningSubject.value ? Colors.red : Color(0xFF7BB53B),
+                      ),
+                      onPressed: () {
+                        if (controller.isListeningSubject.value) {
+                          controller.stopListening(controller.isListeningSubject);
+                        } else {
+                          controller.startListening(controller.subjectController, controller.isListeningSubject);
+                        }
+                      },
+                    ),
+                  ),
+                )),
               ],
             ),
           ),
@@ -461,7 +513,7 @@ class SendEmailWidget extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 12),
-                TextField(
+                Obx(() => TextField(
                   controller: controller.messageController,
                   maxLines: 10,
                   decoration: InputDecoration(
@@ -478,8 +530,24 @@ class SendEmailWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Color(0xFF7BB53B), width: 2),
                     ),
+                    suffixIcon: Padding(
+                      padding: EdgeInsets.only(top: 8, right: 8),
+                      child: IconButton(
+                        icon: Icon(
+                          controller.isListeningMessage.value ? Icons.mic : Icons.mic_none,
+                          color: controller.isListeningMessage.value ? Colors.red : Color(0xFF7BB53B),
+                        ),
+                        onPressed: () {
+                          if (controller.isListeningMessage.value) {
+                            controller.stopListening(controller.isListeningMessage);
+                          } else {
+                            controller.startListening(controller.messageController, controller.isListeningMessage);
+                          }
+                        },
+                      ),
+                    ),
                   ),
-                ),
+                )),
               ],
             ),
           ),
@@ -503,96 +571,6 @@ class SendEmailWidget extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLocationDropdowns(SendEmailController controller) {
-    return Obx(() => Column(
-      children: [
-        _buildDropdown(
-          label: 'State',
-          value: controller.selectedState.value,
-          items: controller.states,
-          onChanged: (value) {
-            controller.selectedState.value = value;
-            controller.selectedDistrict.value = null;
-            controller.selectedCity.value = null;
-            controller.selectedVillage.value = null;
-          },
-          icon: Icons.map,
-        ),
-        if (controller.selectedState.value != null) ...[
-          SizedBox(height: 12),
-          _buildDropdown(
-            label: 'District',
-            value: controller.selectedDistrict.value,
-            items: controller.getDistricts(),
-            onChanged: (value) {
-              controller.selectedDistrict.value = value;
-              controller.selectedCity.value = null;
-              controller.selectedVillage.value = null;
-            },
-            icon: Icons.location_city,
-          ),
-        ],
-        if (controller.selectedDistrict.value != null) ...[
-          SizedBox(height: 12),
-          _buildDropdown(
-            label: 'City',
-            value: controller.selectedCity.value,
-            items: controller.getCities(),
-            onChanged: (value) {
-              controller.selectedCity.value = value;
-              controller.selectedVillage.value = null;
-            },
-            icon: Icons.apartment,
-          ),
-        ],
-        if (controller.selectedCity.value != null) ...[
-          SizedBox(height: 12),
-          _buildDropdown(
-            label: 'Village',
-            value: controller.selectedVillage.value,
-            items: controller.getVillages(),
-            onChanged: (value) {
-              controller.selectedVillage.value = value;
-            },
-            icon: Icons.home_work,
-          ),
-        ],
-      ],
-    ));
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required Function(String?) onChanged,
-    required IconData icon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonFormField<String>(
-        value: value,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: Color(0xFF7BB53B)),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-        items: items.map((item) {
-          return DropdownMenuItem(
-            value: item,
-            child: Text(item),
-          );
-        }).toList(),
-        onChanged: onChanged,
-        hint: Text('Select $label'),
       ),
     );
   }
@@ -657,20 +635,39 @@ class SendEmailWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: Colors.grey[300]!),
                     ),
-                    child: TextField(
-                      controller: controller.aiMessageController,
-                      decoration: InputDecoration(
-                        hintText: 'Ask AI to generate email...',
-                        border: InputBorder.none,
-                        hintStyle: TextStyle(color: Colors.grey),
-                      ),
-                      maxLines: null,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (text) {
-                        if (text.trim().isNotEmpty) {
-                          controller.generateEmailWithAI(text);
-                        }
-                      },
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller.aiMessageController,
+                            decoration: InputDecoration(
+                              hintText: 'Ask AI to generate email...',
+                              border: InputBorder.none,
+                              hintStyle: TextStyle(color: Colors.grey),
+                            ),
+                            maxLines: null,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (text) {
+                              if (text.trim().isNotEmpty) {
+                                controller.generateEmailWithAI(text);
+                              }
+                            },
+                          ),
+                        ),
+                        Obx(() => IconButton(
+                          icon: Icon(
+                            controller.isListeningAI.value ? Icons.mic : Icons.mic_none,
+                            color: controller.isListeningAI.value ? Colors.red : Color(0xFF7BB53B),
+                          ),
+                          onPressed: () {
+                            if (controller.isListeningAI.value) {
+                              controller.stopListening(controller.isListeningAI);
+                            } else {
+                              controller.startListening(controller.aiMessageController, controller.isListeningAI);
+                            }
+                          },
+                        )),
+                      ],
                     ),
                   ),
                 ),

@@ -9,55 +9,87 @@ class SuperadminlistView extends GetView<SuperadminlistController> {
   @override
   Widget build(BuildContext context) {
     final messageController = TextEditingController();
-    
+
     final body = Container(
       color: const Color(0xFFF5F7FA),
       child: Column(
         children: [
           // Selection toolbar
-          Obx(() => controller.selectedIds.isNotEmpty
-              ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7BB53B).withOpacity(0.1),
-                    border: Border(
-                      bottom: BorderSide(color: const Color(0xFF7BB53B).withOpacity(0.3)),
+          Obx(
+            () => controller.selectedIds.isNotEmpty
+                ? Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: const Color(0xFF7BB53B), size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${controller.selectedIds.length} selected',
-                        style: const TextStyle(
-                          color: Color(0xFF2A6E9B),
-                          fontWeight: FontWeight.w600,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7BB53B).withOpacity(0.1),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: const Color(0xFF7BB53B).withOpacity(0.3),
                         ),
                       ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: controller.clearSelection,
-                        child: const Text('Clear'),
-                      ),
-                      TextButton(
-                        onPressed: controller.selectAll,
-                        child: const Text('Select All'),
-                      ),
-                    ],
-                  ),
-                )
-              : const SizedBox.shrink()),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: const Color(0xFF7BB53B),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${controller.selectedIds.length} selected',
+                          style: const TextStyle(
+                            color: Color(0xFF2A6E9B),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: controller.clearSelection,
+                          child: const Text('Clear'),
+                        ),
+                        TextButton(
+                          onPressed: controller.selectAll,
+                          child: const Text('Select All'),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
           // List
           Expanded(
             child: Obx(() {
+              // Show loading indicator
+              if (controller.isLoading.value) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF7BB53B)),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading super admins...',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               final list = controller.superAdmins;
               if (list.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.supervisor_account_rounded, size: 80, color: Colors.grey[400]),
+                      Icon(
+                        Icons.supervisor_account_rounded,
+                        size: 80,
+                        color: Colors.grey[400],
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No super admins found',
@@ -94,10 +126,19 @@ class SuperadminlistView extends GetView<SuperadminlistController> {
                         ],
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         leading: CircleAvatar(
-                          backgroundColor: const Color(0xFFF4B23B).withOpacity(0.2),
-                          child: const Icon(Icons.star, color: Color(0xFFF4B23B), size: 22),
+                          backgroundColor: const Color(
+                            0xFFF4B23B,
+                          ).withOpacity(0.2),
+                          child: const Icon(
+                            Icons.star,
+                            color: Color(0xFFF4B23B),
+                            size: 22,
+                          ),
                         ),
                         title: Row(
                           children: [
@@ -113,12 +154,17 @@ class SuperadminlistView extends GetView<SuperadminlistController> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF7BB53B).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: const Color(0xFF7BB53B).withOpacity(0.3),
+                                  color: const Color(
+                                    0xFF7BB53B,
+                                  ).withOpacity(0.3),
                                 ),
                               ),
                               child: Text(
@@ -136,12 +182,19 @@ class SuperadminlistView extends GetView<SuperadminlistController> {
                           padding: const EdgeInsets.only(top: 6.0),
                           child: Row(
                             children: [
-                              const Icon(Icons.place, size: 14, color: Color(0xFF54B5D9)),
+                              const Icon(
+                                Icons.place,
+                                size: 14,
+                                color: Color(0xFF54B5D9),
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   item.levelPath,
-                                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[700],
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -150,8 +203,11 @@ class SuperadminlistView extends GetView<SuperadminlistController> {
                         ),
                         trailing: Checkbox(
                           value: selected,
-                          onChanged: (v) => controller.toggleSelection(item.id, v),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                          onChanged: (v) =>
+                              controller.toggleSelection(item.id, v),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                           activeColor: const Color(0xFF7BB53B),
                         ),
                       ),
@@ -204,41 +260,43 @@ class SuperadminlistView extends GetView<SuperadminlistController> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Obx(() => controller.isSending.value
-                      ? const SizedBox(
-                          width: 48,
-                          height: 48,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF7BB53B),
+                  Obx(
+                    () => controller.isSending.value
+                        ? const SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF7BB53B),
+                              ),
                             ),
-                          ),
-                        )
-                      : Material(
-                          color: const Color(0xFF7BB53B),
-                          borderRadius: BorderRadius.circular(24),
-                          child: InkWell(
-                            onTap: () {
-                              final text = messageController.text;
-                              if (text.trim().isNotEmpty) {
-                                controller.sendMessageToSelected(text);
-                                messageController.clear();
-                              }
-                            },
+                          )
+                        : Material(
+                            color: const Color(0xFF7BB53B),
                             borderRadius: BorderRadius.circular(24),
-                            child: Container(
-                              width: 48,
-                              height: 48,
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.send,
-                                color: Colors.white,
-                                size: 22,
+                            child: InkWell(
+                              onTap: () {
+                                final text = messageController.text;
+                                if (text.trim().isNotEmpty) {
+                                  controller.sendMessageToSelected(text);
+                                  messageController.clear();
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(24),
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.send,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
                               ),
                             ),
                           ),
-                        )),
+                  ),
                 ],
               ),
             ),

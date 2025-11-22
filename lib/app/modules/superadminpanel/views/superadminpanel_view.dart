@@ -6,6 +6,9 @@ import '../../../widhets/send_whatsapp_message.dart';
 import '../../../widhets/registration_form_widget.dart';
 import '../../../widhets/request_status_widget.dart';
 import '../../../widhets/setting_widget.dart';
+import '../../../widhets/send_email.dart';
+
+import '../../../widhets/crop_claim.dart';
 
 class SuperadminpanelView extends GetView<SuperadminpanelController> {
   const SuperadminpanelView({super.key});
@@ -18,23 +21,25 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
           // Main Content Area (always full width)
           _buildContent(context),
           // Overlay when navigation is open
-          Obx(() => controller.isNavigationOpen.value
-              ? GestureDetector(
-                  onTap: () => controller.toggleNavigation(),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.5),
-                  ),
-                )
-              : SizedBox.shrink()),
+          Obx(
+            () => controller.isNavigationOpen.value
+                ? GestureDetector(
+                    onTap: () => controller.toggleNavigation(),
+                    child: Container(color: Colors.black.withOpacity(0.5)),
+                  )
+                : SizedBox.shrink(),
+          ),
           // Side Navigation
-          Obx(() => AnimatedPositioned(
-            duration: Duration(milliseconds: 300),
-            left: controller.isNavigationOpen.value ? 0 : -250,
-            top: 0,
-            bottom: 0,
-            width: 250,
-            child: _buildSideNavigation(context),
-          )),
+          Obx(
+            () => AnimatedPositioned(
+              duration: Duration(milliseconds: 300),
+              left: controller.isNavigationOpen.value ? 0 : -250,
+              top: 0,
+              bottom: 0,
+              width: 250,
+              child: _buildSideNavigation(context),
+            ),
+          ),
         ],
       ),
     );
@@ -46,10 +51,7 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2E7D32),
-            Color(0xFF1B5E20),
-          ],
+          colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
         ),
         boxShadow: [
           BoxShadow(
@@ -70,7 +72,11 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
                   CircleAvatar(
                     radius: 40,
                     backgroundColor: Colors.white.withOpacity(0.2),
-                    child: Icon(Icons.supervisor_account, size: 40, color: Colors.white),
+                    child: Icon(
+                      Icons.supervisor_account,
+                      size: 40,
+                      color: Colors.white,
+                    ),
                   ),
                   SizedBox(height: 12),
                   Text(
@@ -83,10 +89,7 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
                   ),
                   Text(
                     'Panel',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
@@ -99,9 +102,15 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
                 children: [
                   _buildNavItem(0, Icons.message, 'Admin Messages'),
                   _buildNavItem(1, Icons.send, 'Send Message'),
-                  _buildNavItem(2, Icons.app_registration, 'Registration'),
-                  _buildNavItem(3, Icons.pending_actions, 'Request Status'),
-                  _buildNavItem(4, Icons.settings, 'Settings'),
+                  _buildNavItem(2, Icons.email, 'Send Email'),
+                  _buildNavItem(3, Icons.agriculture, 'Crop Claim'),
+                  _buildNavItem(4, Icons.app_registration, 'Registration'),
+                  _buildNavItem(5, Icons.pending_actions, 'Request Status'),
+                  _buildNavItem(6, Icons.settings, 'Settings'),
+
+                  // New tabs
+
+                  // _buildNavItem(6, Icons.account_balance, 'Government Schemes'),
                 ],
               ),
             ),
@@ -117,7 +126,9 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
+          color: isSelected
+              ? Colors.white.withOpacity(0.2)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Material(
@@ -142,7 +153,9 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -181,27 +194,51 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
             Icons.send,
             SendWhatsappWidget(),
           );
+
         case 2:
+          return _buildPageWithHeader(
+            context,
+            'Send Email',
+            Icons.email,
+            const SendEmailWidget(),
+          );
+        case 3:
+          return _buildPageWithHeader(
+            context,
+            'Crop Claim',
+            Icons.agriculture,
+            const CropClaimWidget(),
+          );
+        case 4:
           return _buildPageWithHeader(
             context,
             'Registration',
             Icons.app_registration,
             RegistrationForm(selectedLanguage: 'en-US'),
           );
-        case 3:
+        case 5:
           return _buildPageWithHeader(
             context,
             'Request Status',
             Icons.pending_actions,
             RequestStatusWidget(),
           );
-        case 4:
+        case 6:
           return _buildPageWithHeader(
             context,
             'Settings',
             Icons.settings,
             SettingsWidget(selectedLanguage: 'en-US'),
           );
+
+        // case 6:
+        //   return _buildPageWithHeader(
+        //     context,
+        //     'Government Schemes',
+        //     Icons.account_balance,
+        //     const GovernmentSchemeWidget(),
+        //   );
+
         default:
           return _buildPageWithHeader(
             context,
@@ -213,7 +250,12 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
     });
   }
 
-  Widget _buildPageWithHeader(BuildContext context, String title, IconData icon, Widget content) {
+  Widget _buildPageWithHeader(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Widget content,
+  ) {
     return Container(
       color: Color(0xFFF5F7FA),
       child: Column(

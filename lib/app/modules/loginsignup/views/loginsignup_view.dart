@@ -30,12 +30,12 @@ class LoginsignupView extends GetView<LoginsignupController> {
                   // Logo and Title
                   _buildHeader(),
                   const SizedBox(height: 40),
-                  
+
                   // Login/Signup Form Card
                   _buildFormCard(),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Toggle between Login and Signup
                   _buildToggleButton(),
                 ],
@@ -67,16 +67,16 @@ class LoginsignupView extends GetView<LoginsignupController> {
           ),
           child: ClipOval(
             child: Image.asset(
-              'assets/images/applogo.png',
+              'assets/images/smartshetkari.png',
               fit: BoxFit.cover,
             ),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // App Name
         const Text(
-          'KisaanConnect',
+          'Smart Shetkari',
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -85,17 +85,17 @@ class LoginsignupView extends GetView<LoginsignupController> {
           ),
         ),
         const SizedBox(height: 8),
-        
-        Obx(() => Text(
-          controller.isLogin.value 
-              ? 'Welcome Back!' 
-              : 'Create Your Account',
-          style: TextStyle(
-            fontSize: 16,
-            color: const Color(0xFF2E8B57).withOpacity(0.8),
-            fontWeight: FontWeight.w500,
+
+        Obx(
+          () => Text(
+            controller.isLogin.value ? 'Welcome Back!' : 'Create Your Account',
+            style: TextStyle(
+              fontSize: 16,
+              color: const Color(0xFF2E8B57).withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -114,12 +114,14 @@ class LoginsignupView extends GetView<LoginsignupController> {
           ),
         ],
       ),
-      child: Obx(() => AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: controller.isLogin.value 
-            ? _buildLoginForm() 
-            : _buildSignupForm(),
-      )),
+      child: Obx(
+        () => AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: controller.isLogin.value
+              ? _buildLoginForm()
+              : _buildSignupForm(),
+        ),
+      ),
     );
   }
 
@@ -150,7 +152,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Phone Field
             _buildTextField(
               controller: controller.loginPhoneController,
@@ -169,59 +171,63 @@ class LoginsignupView extends GetView<LoginsignupController> {
               },
             ),
             const SizedBox(height: 20),
-            
+
             // Password Field
-            Obx(() => _buildTextField(
-              controller: controller.loginPasswordController,
-              label: 'Password',
-              hint: 'Enter your password',
-              icon: Icons.lock_outline,
-              obscureText: !controller.isLoginPasswordVisible.value,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  controller.isLoginPasswordVisible.value
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: const Color(0xFF2E8B57),
-                ),
-                onPressed: controller.toggleLoginPasswordVisibility,
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your password';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-            )),
-            const SizedBox(height: 12),
-            
-            // Forgot Password
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  // TODO: Implement forgot password
-                },
-                child: const Text(
-                  'Forgot Password?',
-                  style: TextStyle(
-                    color: Color(0xFF3C9ED0),
-                    fontWeight: FontWeight.w600,
+            Obx(
+              () => _buildTextField(
+                controller: controller.loginPasswordController,
+                label: 'Password',
+                hint: 'Enter your password',
+                icon: Icons.lock_outline,
+                obscureText: !controller.isLoginPasswordVisible.value,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    controller.isLoginPasswordVisible.value
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: const Color(0xFF2E8B57),
                   ),
+                  onPressed: controller.toggleLoginPasswordVisibility,
                 ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your password';
+                  }
+                  if (value.length < 6) {
+                    return 'Password must be at least 6 characters';
+                  }
+                  return null;
+                },
               ),
             ),
+            const SizedBox(height: 12),
+
+            // Forgot Password
+            // Align(
+            //   alignment: Alignment.centerRight,
+            //   child: TextButton(
+            //     onPressed: () {
+            //       // TODO: Implement forgot password
+            //     },
+            //     child: const Text(
+            //       'Forgot Password?',
+            //       style: TextStyle(
+            //         color: Color(0xFF3C9ED0),
+            //         fontWeight: FontWeight.w600,
+            //       ),
+            //     ),
+            //   ),
+            // ),
             const SizedBox(height: 24),
-            
+
             // Login Button
-            Obx(() => _buildActionButton(
-              text: 'Login',
-              isLoading: controller.isLoading.value,
-              onPressed: controller.login,
-            )),
+            Obx(
+              () => _buildActionButton(
+                text: 'Login',
+                isLoading: controller.isLoading.value,
+                onPressed: controller.login,
+              ),
+            ),
           ],
         ),
       ),
@@ -255,7 +261,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Name Field
             _buildTextField(
               controller: controller.signupNameController,
@@ -270,7 +276,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
               },
             ),
             const SizedBox(height: 20),
-            
+
             // Phone Field
             _buildTextField(
               controller: controller.signupPhoneController,
@@ -289,7 +295,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
               },
             ),
             const SizedBox(height: 20),
-            
+
             // Email Field
             _buildTextField(
               controller: controller.signupEmailController,
@@ -308,45 +314,49 @@ class LoginsignupView extends GetView<LoginsignupController> {
               },
             ),
             const SizedBox(height: 20),
-            
+
             // Password Field
-            Obx(() => _buildTextField(
-              controller: controller.signupPasswordController,
-              label: 'Password',
-              hint: 'Create a password',
-              icon: Icons.lock_outline,
-              obscureText: !controller.isSignupPasswordVisible.value,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  controller.isSignupPasswordVisible.value
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: const Color(0xFF2E8B57),
+            Obx(
+              () => _buildTextField(
+                controller: controller.signupPasswordController,
+                label: 'Password',
+                hint: 'Create a password',
+                icon: Icons.lock_outline,
+                obscureText: !controller.isSignupPasswordVisible.value,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    controller.isSignupPasswordVisible.value
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: const Color(0xFF2E8B57),
+                  ),
+                  onPressed: controller.toggleSignupPasswordVisibility,
                 ),
-                onPressed: controller.toggleSignupPasswordVisibility,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a password';
+                  }
+                  if (value.length < 6) {
+                    return 'Password must be at least 6 characters';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a password';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-            )),
+            ),
             const SizedBox(height: 20),
-            
+
             // Role Selection
             _buildRoleSelector(),
             const SizedBox(height: 32),
-            
+
             // Signup Button
-            Obx(() => _buildActionButton(
-              text: 'Sign Up',
-              isLoading: controller.isLoading.value,
-              onPressed: controller.signup,
-            )),
+            Obx(
+              () => _buildActionButton(
+                text: 'Sign Up',
+                isLoading: controller.isLoading.value,
+                onPressed: controller.signup,
+              ),
+            ),
           ],
         ),
       ),
@@ -368,10 +378,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(
-        fontSize: 16,
-        color: Color(0xFF2D323A),
-      ),
+      style: const TextStyle(fontSize: 16, color: Color(0xFF2D323A)),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -381,9 +388,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
           color: Color(0xFF2E8B57),
           fontWeight: FontWeight.w500,
         ),
-        hintStyle: TextStyle(
-          color: const Color(0xFF2D323A).withOpacity(0.4),
-        ),
+        hintStyle: TextStyle(color: const Color(0xFF2D323A).withOpacity(0.4)),
         filled: true,
         fillColor: const Color(0xFF5CC96F).withOpacity(0.05),
         border: OutlineInputBorder(
@@ -399,24 +404,15 @@ class LoginsignupView extends GetView<LoginsignupController> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Color(0xFF2E8B57),
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: Color(0xFF2E8B57), width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
       ),
     );
@@ -435,45 +431,47 @@ class LoginsignupView extends GetView<LoginsignupController> {
           ),
         ),
         const SizedBox(height: 12),
-        Obx(() => Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: controller.roles.map((role) {
-            final isSelected = controller.selectedRole.value == role;
-            return InkWell(
-              onTap: () => controller.setRole(role),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF2E8B57)
-                      : const Color(0xFF5CC96F).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+        Obx(
+          () => Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: controller.roles.map((role) {
+              final isSelected = controller.selectedRole.value == role;
+              return InkWell(
+                onTap: () => controller.setRole(role),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
                     color: isSelected
                         ? const Color(0xFF2E8B57)
-                        : const Color(0xFF5CC96F).withOpacity(0.3),
-                    width: 2,
+                        : const Color(0xFF5CC96F).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF2E8B57)
+                          : const Color(0xFF5CC96F).withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Text(
+                    role,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF2E8B57),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-                child: Text(
-                  role,
-                  style: TextStyle(
-                    color: isSelected
-                        ? Colors.white
-                        : const Color(0xFF2E8B57),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        )),
+              );
+            }).toList(),
+          ),
+        ),
       ],
     );
   }
@@ -487,10 +485,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
       height: 56,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF2E8B57),
-            Color(0xFF5CC96F),
-          ],
+          colors: [Color(0xFF2E8B57), Color(0xFF5CC96F)],
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
@@ -533,33 +528,35 @@ class LoginsignupView extends GetView<LoginsignupController> {
   }
 
   Widget _buildToggleButton() {
-    return Obx(() => Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          controller.isLogin.value
-              ? "Don't have an account? "
-              : "Already have an account? ",
-          style: TextStyle(
-            color: const Color(0xFF2D323A).withOpacity(0.7),
-            fontSize: 15,
-          ),
-        ),
-        TextButton(
-          onPressed: controller.toggleView,
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-          ),
-          child: Text(
-            controller.isLogin.value ? 'Sign Up' : 'Login',
-            style: const TextStyle(
-              color: Color(0xFF2E8B57),
+    return Obx(
+      () => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            controller.isLogin.value
+                ? "Don't have an account? "
+                : "Already have an account? ",
+            style: TextStyle(
+              color: const Color(0xFF2D323A).withOpacity(0.7),
               fontSize: 15,
-              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-      ],
-    ));
+          TextButton(
+            onPressed: controller.toggleView,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: Text(
+              controller.isLogin.value ? 'Sign Up' : 'Login',
+              style: const TextStyle(
+                color: Color(0xFF2E8B57),
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

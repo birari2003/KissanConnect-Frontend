@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/farmerslist_controller.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../utils/ui_utils.dart';
 
 class FarmerslistView extends GetView<FarmerslistController> {
   final bool embedded;
@@ -15,6 +17,23 @@ class FarmerslistView extends GetView<FarmerslistController> {
           _buildFilterChips(),
           Expanded(
             child: Obx(() {
+              // Show loading indicator
+              if (controller.isLoading.value) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF7BB53B)),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading farmers...',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               final filteredFarmers = controller.filteredFarmers;
               if (filteredFarmers.isEmpty) {
                 return Center(
@@ -31,17 +50,35 @@ class FarmerslistView extends GetView<FarmerslistController> {
                         'No farmers found',
                         style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                       ),
+                      SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => controller.loadFarmers(),
+                        icon: Icon(Icons.refresh),
+                        label: Text('Refresh'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF7BB53B),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 );
               }
-              return ListView.builder(
-                padding: EdgeInsets.all(16),
-                itemCount: filteredFarmers.length,
-                itemBuilder: (context, index) {
-                  final farmer = filteredFarmers[index];
-                  return _buildFarmerCard(farmer);
-                },
+              return RefreshIndicator(
+                onRefresh: controller.loadFarmers,
+                color: Color(0xFF7BB53B),
+                child: ListView.builder(
+                  padding: EdgeInsets.all(16),
+                  itemCount: filteredFarmers.length,
+                  itemBuilder: (context, index) {
+                    final farmer = filteredFarmers[index];
+                    return _buildFarmerCard(farmer);
+                  },
+                ),
               );
             }),
           ),
@@ -62,6 +99,13 @@ class FarmerslistView extends GetView<FarmerslistController> {
         ),
         backgroundColor: const Color(0xFF2A6E9B),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: () => controller.loadFarmers(),
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: body,
     );
@@ -154,7 +198,25 @@ class FarmerslistView extends GetView<FarmerslistController> {
                       size: 28,
                     ),
                   ),
-                  SizedBox(width: 16),
+                  SizedBox(width: 12),
+                  // Phone call button
+                  Material(
+                    color: Color(0xFF7BB53B).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: () => _makePhoneCall(farmer.contact),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.phone,
+                          color: Color(0xFF7BB53B),
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,6 +432,22 @@ class FarmerslistView extends GetView<FarmerslistController> {
     }
   }
 
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    // Remove any spaces or special characters except +
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    final Uri phoneUri = Uri(scheme: 'tel', path: cleanNumber);
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        UiUtils.showErrorSnackbar('Error', 'Could not launch phone dialer');
+      }
+    } catch (e) {
+      UiUtils.showErrorSnackbar('Error', 'Failed to make call: $e');
+    }
+  }
+
   void _showSuperAdminBottomSheet(farmer) {
     controller.resetSuperAdminSelection();
     Get.bottomSheet(
@@ -381,125 +459,127 @@ class FarmerslistView extends GetView<FarmerslistController> {
             topRight: Radius.circular(24),
           ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              margin: EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                margin: EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.star, color: Color(0xFFF4B23B), size: 28),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Assign Super Admin',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2A6E9B),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Make ${farmer.name} a Super Admin?',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                  ),
-                  SizedBox(height: 24),
-                  Text(
-                    'Select Administrative Level',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2A6E9B),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  _buildLocationDropdowns(),
-                  SizedBox(height: 16),
-                  Obx(
-                    () => Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Color(0xFF54B5D9).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Color(0xFF54B5D9).withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 18,
-                            color: Color(0xFF54B5D9),
-                          ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Selected: ${controller.getSuperAdminLevelText()}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF2A6E9B),
-                                fontWeight: FontWeight.w500,
-                              ),
+              Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.star, color: Color(0xFFF4B23B), size: 28),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Assign Super Admin',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2A6E9B),
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Make ${farmer.name} a Super Admin?',
+                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    ),
+                    SizedBox(height: 24),
+                    Text(
+                      'Select Administrative Level',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2A6E9B),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Get.back(),
-                          child: Text('Cancel'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.grey[700],
-                            padding: EdgeInsets.symmetric(vertical: 14),
-                            side: BorderSide(color: Colors.grey[300]!),
+                    SizedBox(height: 16),
+                    _buildLocationDropdowns(),
+                    SizedBox(height: 16),
+                    Obx(
+                      () => Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF54B5D9).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Color(0xFF54B5D9).withOpacity(0.3),
                           ),
                         ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: () =>
-                              controller.assignSuperAdmin(farmer.id),
-                          child: Text('Assign Now'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF7BB53B),
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: Color(0xFF54B5D9),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Selected: ${controller.getSuperAdminLevelText()}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF2A6E9B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Get.back(),
+                            child: Text('Cancel'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.grey[700],
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () =>
+                                controller.assignSuperAdmin(farmer.id),
+                            child: Text('Assign Now'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF7BB53B),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       isScrollControlled: true,
@@ -512,62 +592,105 @@ class FarmerslistView extends GetView<FarmerslistController> {
       () => Column(
         children: [
           // State Dropdown
-          _buildDropdown(
+          _buildApiDropdown(
             label: 'State',
-            value: controller.selectedState.value,
+            value: controller.selectedStateId.value,
             items: controller.states,
-            onChanged: (value) {
-              controller.selectedState.value = value;
-              controller.selectedDistrict.value = null;
-              controller.selectedCity.value = null;
-              controller.selectedVillage.value = null;
+            onChanged: (stateId) {
+              final state = controller.states.firstWhere(
+                (s) => s != null && s['id'].toString() == stateId,
+                orElse: () => {},
+              );
+              controller.onStateSelected(stateId, state['name']);
             },
+            getItemId: (item) => item?['id']?.toString() ?? '',
+            getItemName: (item) => item?['name'] ?? '',
             icon: Icons.map,
           ),
-          if (controller.selectedState.value != null) ...[
+          if (controller.selectedStateId.value != null) ...[
             SizedBox(height: 12),
-            _buildDropdown(
+            _buildApiDropdown(
               label: 'District',
-              value: controller.selectedDistrict.value,
-              items: controller.getDistricts(),
-              onChanged: (value) {
-                controller.selectedDistrict.value = value;
-                controller.selectedCity.value = null;
-                controller.selectedVillage.value = null;
+              value: controller.selectedDistrictId.value,
+              items: controller.districts,
+              onChanged: (districtId) {
+                final district = controller.districts.firstWhere(
+                  (d) => d != null && d['id'].toString() == districtId,
+                  orElse: () => {},
+                );
+                controller.onDistrictSelected(districtId, district['name']);
               },
+              getItemId: (item) => item?['id']?.toString() ?? '',
+              getItemName: (item) => item?['name'] ?? '',
               icon: Icons.location_city,
             ),
           ],
-          if (controller.selectedDistrict.value != null) ...[
+          if (controller.selectedDistrictId.value != null) ...[
             SizedBox(height: 12),
-            _buildDropdown(
-              label: 'City',
-              value: controller.selectedCity.value,
-              items: controller.getCities(),
-              onChanged: (value) {
-                controller.selectedCity.value = value;
-                controller.selectedVillage.value = null;
+            _buildApiDropdown(
+              label: 'Taluka',
+              value: controller.selectedTalukaId.value,
+              items: controller.talukas,
+              onChanged: (talukaId) {
+                final taluka = controller.talukas.firstWhere(
+                  (t) => t != null && t['id'].toString() == talukaId,
+                  orElse: () => {},
+                );
+                controller.onTalukaSelected(talukaId, taluka['name']);
               },
+              getItemId: (item) => item?['id']?.toString() ?? '',
+              getItemName: (item) => item?['name'] ?? '',
               icon: Icons.apartment,
             ),
           ],
-          if (controller.selectedCity.value != null) ...[
-            SizedBox(height: 12),
-            _buildDropdown(
-              label: 'Village',
-              value: controller.selectedVillage.value,
-              items: controller.getVillages(),
-              onChanged: (value) {
-                controller.selectedVillage.value = value;
-              },
-              icon: Icons.home_work,
-            ),
-          ],
+          // Village dropdown can be added when API is available
         ],
       ),
     );
   }
 
+  Widget _buildApiDropdown({
+    required String label,
+    required String? value,
+    required List<dynamic> items,
+    required Function(String?) onChanged,
+    required String Function(dynamic) getItemId,
+    required String Function(dynamic) getItemName,
+    required IconData icon,
+  }) {
+    // Filter out null items and ensure the value exists in items
+    final validItems = items.where((item) => item != null).toList();
+    final validValue =
+        value != null && validItems.any((item) => getItemId(item) == value)
+        ? value
+        : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: validValue,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon, color: Color(0xFF7BB53B)),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+        items: validItems.map((item) {
+          return DropdownMenuItem(
+            value: getItemId(item),
+            child: Text(getItemName(item)),
+          );
+        }).toList(),
+        onChanged: onChanged,
+        hint: Text('Select $label'),
+      ),
+    );
+  }
+
+  // Keep the old _buildDropdown for backward compatibility if needed
   Widget _buildDropdown({
     required String label,
     required String? value,

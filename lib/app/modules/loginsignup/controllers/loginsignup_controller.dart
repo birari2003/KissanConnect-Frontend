@@ -1,35 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../services/authServices.dart';
 
 class LoginsignupController extends GetxController {
   // Observable to toggle between login and signup
   final RxBool isLogin = true.obs;
-  
+
+  final AuthService _authService = AuthService();
+
   // Form keys
   final loginFormKey = GlobalKey<FormState>();
   final signupFormKey = GlobalKey<FormState>();
-  
+
   // Text editing controllers for Login
   final loginPhoneController = TextEditingController();
   final loginPasswordController = TextEditingController();
-  
+
   // Text editing controllers for Signup
   final signupNameController = TextEditingController();
   final signupPhoneController = TextEditingController();
   final signupEmailController = TextEditingController();
   final signupPasswordController = TextEditingController();
   final signupRoleController = TextEditingController();
-  
+
   // Observable for password visibility
   final RxBool isLoginPasswordVisible = false.obs;
   final RxBool isSignupPasswordVisible = false.obs;
-  
+
   // Observable for loading state
   final RxBool isLoading = false.obs;
-  
+
   // Role selection
   final RxString selectedRole = 'Farmer'.obs;
-  final List<String> roles = ['Farmer', 'Buyer', 'Supplier', 'Advisor'];
+  final List<String> roles = ['Farmer', 'Super Admin', 'Admin'];
 
   @override
   void onInit() {
@@ -48,57 +53,112 @@ class LoginsignupController extends GetxController {
     signupRoleController.dispose();
     super.onClose();
   }
-  
+
   void toggleView() {
     isLogin.value = !isLogin.value;
   }
-  
+
   void toggleLoginPasswordVisibility() {
     isLoginPasswordVisible.value = !isLoginPasswordVisible.value;
   }
-  
+
   void toggleSignupPasswordVisibility() {
     isSignupPasswordVisible.value = !isSignupPasswordVisible.value;
   }
-  
+
   void setRole(String role) {
     selectedRole.value = role;
   }
-  
+
   Future<void> login() async {
     if (loginFormKey.currentState!.validate()) {
       isLoading.value = true;
-      
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // TODO: Implement actual login logic
-      print('Login - Phone: ${loginPhoneController.text}');
-      
-      isLoading.value = false;
-      
-      // Navigate to home on success
-      Get.offAllNamed('/home');
+
+      try {
+        final response = await _authService.loginUser(
+          phone: loginPhoneController.text,
+          password: loginPasswordController.text,
+        );
+
+        // Save session
+        final prefs = await SharedPreferences.getInstance();
+        if (response['token'] != null) {
+          await prefs.setString('token', response['token']);
+        }
+        if (response['data'] != null) {
+          await prefs.setString('user_data', jsonEncode(response['data']));
+        }
+
+        Get.snackbar(
+          'Success',
+          response['message'] ?? 'Login successful',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        // Navigate based on role
+        final role = response['data']['role'];
+        if (role == 'farmer') {
+          Get.offAllNamed('/farmerscreendashboard');
+        } else if (role == 'admin') {
+          Get.offAllNamed('/adminpanel');
+        } else if (role == 'super_admin') {
+          Get.offAllNamed('/superadminpanel');
+        } else {
+          // Default fallback
+          Get.offAllNamed('/farmerscreendashboard');
+        }
+      } catch (e) {
+        Get.snackbar(
+          'Error',
+          e.toString().replaceAll('Exception: ', ''),
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      } finally {
+        isLoading.value = false;
+      }
     }
   }
-  
+
   Future<void> signup() async {
     if (signupFormKey.currentState!.validate()) {
       isLoading.value = true;
-      
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // TODO: Implement actual signup logic
-      print('Signup - Name: ${signupNameController.text}');
-      print('Phone: ${signupPhoneController.text}');
-      print('Email: ${signupEmailController.text}');
-      print('Role: ${selectedRole.value}');
-      
-      isLoading.value = false;
-      
-      // Navigate to home on success
-      Get.offAllNamed('/home');
+
+      try {
+        // Get language from arguments or default to English
+        final language = Get.arguments != null
+            ? Get.arguments['language']
+            : 'en';
+
+        await _authService.registerUser(
+          name: signupNameController.text,
+          phone: signupPhoneController.text,
+          email: signupEmailController.text,
+          password: signupPasswordController.text,
+          role: selectedRole.value.toLowerCase(),
+          preferredLanguage: language,
+        );
+
+        Get.snackbar(
+          'Success',
+          'Registration successful. Please login.',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        // Switch to login view
+        isLogin.value = true;
+      } catch (e) {
+        Get.snackbar(
+          'Error',
+          e.toString().replaceAll('Exception: ', ''),
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      } finally {
+        isLoading.value = false;
+      }
     }
   }
 }

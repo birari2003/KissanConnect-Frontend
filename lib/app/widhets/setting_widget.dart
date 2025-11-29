@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../routes/app_pages.dart';
+import '../services/farmerServices.dart';
+import '../utils/ui_utils.dart';
 
 class SettingsWidget extends StatefulWidget {
   final String selectedLanguage;
@@ -22,11 +25,58 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   bool _darkModeEnabled = false;
   String _selectedLanguage = 'en-US';
 
+  // Farmer Profile Data
+  String _farmerName = 'Farmer';
+  String _farmerEmail = '';
+  String _farmerPhoto = '';
+  final FarmerService _farmerService = FarmerService();
+
   @override
   void initState() {
     super.initState();
     _selectedLanguage = widget.selectedLanguage;
     _loadSettings();
+    _fetchFarmerProfile();
+  }
+
+  Future<void> _fetchFarmerProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+
+      // 1. Load basic user data from local storage first
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        if (mounted) {
+          setState(() {
+            if (userData['name'] != null) _farmerName = userData['name'];
+            if (userData['email'] != null) _farmerEmail = userData['email'];
+          });
+        }
+      }
+
+      // 2. Fetch full profile from API
+      final profileData = await _farmerService.getFarmerProfile();
+      if (profileData['success'] == true && profileData['data'] != null) {
+        final data = profileData['data'];
+        final user = data['user'];
+        final profile = data['farmer_profile'];
+
+        if (mounted) {
+          setState(() {
+            if (user != null) {
+              if (user['name'] != null) _farmerName = user['name'];
+              if (user['email'] != null) _farmerEmail = user['email'];
+            }
+            if (profile != null && profile['passport_photo'] != null) {
+              _farmerPhoto = profile['passport_photo'];
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching profile in settings: $e');
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -98,14 +148,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           // Navigate to login screen
           Get.offAllNamed('/loginsignup');
 
-          Get.snackbar(
-            'Success',
-            'Logged out successfully',
-            backgroundColor: Colors.green,
-            colorText: Colors.white,
-            snackPosition: SnackPosition.BOTTOM,
-            margin: const EdgeInsets.all(16),
-          );
+          UiUtils.showSuccessSnackbar('Success', 'Logged out successfully');
         }
       } catch (e) {
         print('Error during logout: $e');
@@ -208,17 +251,28 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                 colors: [const Color(0xFF2E8B57), const Color(0xFF5CC96F)],
               ),
               shape: BoxShape.circle,
+              image: _farmerPhoto.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(
+                        'http://192.168.43.43:5000/uploads/$_farmerPhoto',
+                      ),
+                      fit: BoxFit.cover,
+                      onError: (exception, stackTrace) {},
+                    )
+                  : null,
             ),
-            child: const Icon(Icons.person, color: Colors.white, size: 40),
+            child: _farmerPhoto.isEmpty
+                ? const Icon(Icons.person, color: Colors.white, size: 40)
+                : null,
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Farmer Profile',
-                  style: TextStyle(
+                Text(
+                  _farmerName,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2D323A),
@@ -226,11 +280,14 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Manage your account settings',
+                  _farmerEmail.isNotEmpty
+                      ? _farmerEmail
+                      : 'Manage your account settings',
                   style: TextStyle(
                     fontSize: 14,
                     color: const Color(0xFF2D323A).withOpacity(0.6),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

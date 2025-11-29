@@ -1,53 +1,54 @@
 import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../../../utils/ui_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class PaymentgetwayController extends GetxController {
   final _razorpay = Razorpay();
-  
+
   // Observables
   var isProcessing = false.obs;
   var payerName = ''.obs;
   var payerContact = ''.obs;
   var payerEmail = ''.obs;
-  
+
   // Subscription related
   var selectedPlanId = 'plan_RgHnFHx9XiAhg8'.obs;
   var planAmount = 499.0.obs;
   var planName = 'Yearly Subscription'.obs;
-  
+
   // Backend URL - Replace with your actual backend URL
   final String backendUrl = 'https://your-backend-url.com';
-  
+
   // Current user ID - Get this from your auth service
   final String userId = ''; // TODO: Get from auth service
-  
+
   @override
   void onInit() {
     super.onInit();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-    
+
     // Fetch plan details on init
     fetchPlanDetails();
   }
-  
+
   @override
   void onClose() {
     _razorpay.clear();
     super.onClose();
   }
-  
+
   // Fetch subscription plan details from backend
   Future<void> fetchPlanDetails() async {
     try {
       final response = await http.get(
         Uri.parse('$backendUrl/api/subscription/plan/${selectedPlanId.value}'),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success']) {
@@ -59,10 +60,12 @@ class PaymentgetwayController extends GetxController {
       print('Error fetching plan: $e');
     }
   }
-  
+
   // Method 1: Start payment with Razorpay SDK (In-app checkout)
   Future<void> startSubscriptionPayment() async {
-    if (payerName.value.isEmpty || payerContact.value.isEmpty || payerEmail.value.isEmpty) {
+    if (payerName.value.isEmpty ||
+        payerContact.value.isEmpty ||
+        payerEmail.value.isEmpty) {
       Get.snackbar(
         'Missing Information',
         'Please fill all the required fields',
@@ -72,9 +75,9 @@ class PaymentgetwayController extends GetxController {
       );
       return;
     }
-    
+
     isProcessing.value = true;
-    
+
     try {
       // Create UPI intent and get order ID
       final response = await http.post(
@@ -88,10 +91,10 @@ class PaymentgetwayController extends GetxController {
           'userContact': payerContact.value,
         }),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['success']) {
           // Start Razorpay checkout
           var options = {
@@ -111,11 +114,9 @@ class PaymentgetwayController extends GetxController {
               'netbanking': true,
               'wallet': true,
             },
-            'notes': {
-              'subscription_id': data['subscriptionId'].toString(),
-            },
+            'notes': {'subscription_id': data['subscriptionId'].toString()},
           };
-          
+
           _razorpay.open(options);
         } else {
           throw Exception(data['message']);
@@ -125,19 +126,18 @@ class PaymentgetwayController extends GetxController {
       }
     } catch (e) {
       isProcessing.value = false;
-      Get.snackbar(
-        'Error',
+      UiUtils.showErrorSnackbar(
+        'Payment Error',
         'Failed to initiate payment: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        colorText: Get.theme.colorScheme.error,
       );
     }
   }
-  
+
   // Method 2: Open UPI payment link (Direct UPI with pre-filled amount)
   Future<void> openUpiPaymentLink() async {
-    if (payerName.value.isEmpty || payerContact.value.isEmpty || payerEmail.value.isEmpty) {
+    if (payerName.value.isEmpty ||
+        payerContact.value.isEmpty ||
+        payerEmail.value.isEmpty) {
       Get.snackbar(
         'Missing Information',
         'Please fill all the required fields',
@@ -147,10 +147,10 @@ class PaymentgetwayController extends GetxController {
       );
       return;
     }
-    
+
     try {
       isProcessing.value = true;
-      
+
       // Create payment link with pre-filled amount
       final response = await http.post(
         Uri.parse('$backendUrl/api/subscription/create-payment-link'),
@@ -163,17 +163,17 @@ class PaymentgetwayController extends GetxController {
           'userContact': payerContact.value,
         }),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['success']) {
           // Open payment link in browser
           final uri = Uri.parse(data['paymentLink']);
-          
+
           if (await canLaunchUrl(uri)) {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
-            
+
             Get.snackbar(
               'Payment Link Opened',
               'Complete the payment in the browser. Amount: ₹${planAmount.value}',
@@ -201,15 +201,16 @@ class PaymentgetwayController extends GetxController {
       isProcessing.value = false;
     }
   }
-  
+
   // Method 3: Open direct UPI intent with pre-filled amount
   Future<void> openDirectUpiIntent() async {
     try {
       // Create UPI deep link with pre-filled amount
-      final upiUrl = 'upi://pay?pa=somayuinfotech@razorpay&pn=Somayu Infotech&am=${planAmount.value}&cu=INR&tn=${Uri.encodeComponent(planName.value)}';
-      
+      final upiUrl =
+          'upi://pay?pa=somayuinfotech@razorpay&pn=Somayu Infotech&am=${planAmount.value}&cu=INR&tn=${Uri.encodeComponent(planName.value)}';
+
       final uri = Uri.parse(upiUrl);
-      
+
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
@@ -225,11 +226,11 @@ class PaymentgetwayController extends GetxController {
       openUpiPaymentLink();
     }
   }
-  
+
   // Handle payment success
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     isProcessing.value = false;
-    
+
     // Verify payment on backend
     verifyPayment(
       razorpayPaymentId: response.paymentId!,
@@ -237,20 +238,16 @@ class PaymentgetwayController extends GetxController {
       razorpaySignature: response.signature!,
     );
   }
-  
+
   // Handle payment error
   void _handlePaymentError(PaymentFailureResponse response) {
     isProcessing.value = false;
-    Get.snackbar(
+    UiUtils.showErrorSnackbar(
       'Payment Failed',
-      response.message ?? 'Payment was not successful',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-      colorText: Get.theme.colorScheme.error,
-      duration: const Duration(seconds: 5),
+      'Code: ${response.code}\nMessage: ${response.message}',
     );
   }
-  
+
   // Handle external wallet
   void _handleExternalWallet(ExternalWalletResponse response) {
     isProcessing.value = false;
@@ -260,7 +257,7 @@ class PaymentgetwayController extends GetxController {
       snackPosition: SnackPosition.BOTTOM,
     );
   }
-  
+
   // Verify payment on backend
   Future<void> verifyPayment({
     required String razorpayPaymentId,
@@ -278,20 +275,16 @@ class PaymentgetwayController extends GetxController {
           'subscriptionId': '', // Get from notes in payment response
         }),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         if (data['success']) {
-          Get.snackbar(
+          UiUtils.showSuccessSnackbar(
             'Success',
-            'Subscription activated successfully!',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Get.theme.primaryColor.withOpacity(0.1),
-            colorText: Get.theme.primaryColor,
-            duration: const Duration(seconds: 5),
+            'Payment successful! Subscription activated.',
           );
-          
+
           // Navigate to success page or refresh subscription status
           Get.offAllNamed('/home');
         } else {
@@ -309,14 +302,14 @@ class PaymentgetwayController extends GetxController {
       );
     }
   }
-  
+
   // Check subscription status
   Future<bool> checkSubscriptionStatus() async {
     try {
       final response = await http.get(
         Uri.parse('$backendUrl/api/subscription/status/$userId'),
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['hasActiveSubscription'] ?? false;

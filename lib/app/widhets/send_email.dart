@@ -1,28 +1,101 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/sendEmailService.dart';
+import '../services/adminServices.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import '../utils/ui_utils.dart';
 
+// User model for sender list
+class UserModel {
+  final String name;
+  final String email;
+  final String phone;
+  final String role;
+  final String? superAdminLevel;
+  final Map<String, dynamic>? farmerProfile;
+
+  UserModel({
+    required this.name,
+    required this.email,
+    required this.phone,
+    required this.role,
+    this.superAdminLevel,
+    this.farmerProfile,
+  });
+
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      role: json['role'] ?? '',
+      superAdminLevel: json['super_admin_level'],
+      farmerProfile: json['farmerProfile'],
+    );
+  }
+
+  String get displayName => '$name ($email)';
+}
+
 class SendEmailController extends GetxController {
   // Toggle between Send Email and Generate Email with AI
   final selectedTab = 0.obs; // 0 = Send Email, 1 = Generate with AI
 
   // Email fields
-  final toEmailController = TextEditingController();
   final subjectController = TextEditingController();
   final messageController = TextEditingController();
 
-  // Verified Brevo senders (choose one as the From address)
-  final availableSenders = <String>[
-    'gauravbirari690@gmail.com',
-    'gauravbirari07@gmail.com',
-  ].obs;
-  // Multi-select of senders
-  final selectedSenders = <String>[].obs;
+  // Admin service for fetching users
+  final adminService = AdminService();
+
+  // User list from API
+  final users = <UserModel>[].obs;
+  final isLoadingUsers = false.obs;
+  final userLoadError = ''.obs;
+
+  // Location Filters
+  final states = <dynamic>[].obs;
+  final districts = <dynamic>[].obs;
+  final talukas = <dynamic>[].obs;
+  final villages = <dynamic>[].obs;
+
+  final selectedState = Rxn<String>();
+  final selectedDistrict = Rxn<String>();
+  final selectedTaluka = Rxn<String>();
+  final selectedVillage = Rxn<String>();
+
+  final isLoadingLocations = false.obs;
+
+  // Filtered Users
+  List<UserModel> get filteredUsers {
+    return users.where((user) {
+      if (user.role != 'farmer' || user.farmerProfile == null) return false;
+
+      final profile = user.farmerProfile!;
+
+      if (selectedState.value != null &&
+          profile['state_id'].toString() != selectedState.value) {
+        return false;
+      }
+      if (selectedDistrict.value != null &&
+          profile['district_id'].toString() != selectedDistrict.value) {
+        return false;
+      }
+      if (selectedTaluka.value != null &&
+          profile['taluka_id'].toString() != selectedTaluka.value) {
+        return false;
+      }
+      if (selectedVillage.value != null &&
+          profile['village_id'].toString() != selectedVillage.value) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+  }
 
   // AI Chat
   final chatMessages = <ChatMessage>[].obs;
@@ -40,11 +113,98 @@ class SendEmailController extends GetxController {
   void onInit() {
     super.onInit();
     _speech = stt.SpeechToText();
+    loadUsers(); // Load users from API on initialization
+    fetchStates();
+  }
+
+  // Fetch States
+  Future<void> fetchStates() async {
+    try {
+      final data = await adminService.getStates();
+      states.assignAll(data);
+    } catch (e) {
+      print('Error fetching states: $e');
+    }
+  }
+
+  // Fetch Districts
+  Future<void> fetchDistricts(String stateId) async {
+    try {
+      districts.clear();
+      talukas.clear();
+      villages.clear();
+      selectedDistrict.value = null;
+      selectedTaluka.value = null;
+      selectedVillage.value = null;
+
+      final data = await adminService.getDistrictsByState(stateId);
+      districts.assignAll(data);
+    } catch (e) {
+      print('Error fetching districts: $e');
+    }
+  }
+
+  // Fetch Talukas
+  Future<void> fetchTalukas(String districtId) async {
+    try {
+      talukas.clear();
+      villages.clear();
+      selectedTaluka.value = null;
+      selectedVillage.value = null;
+
+      final data = await adminService.getTalukasByDistrict(districtId);
+      talukas.assignAll(data);
+    } catch (e) {
+      print('Error fetching talukas: $e');
+    }
+  }
+
+  // Fetch Villages
+  void fetchVillages(String talukaId) {
+    try {
+      villages.clear();
+      selectedVillage.value = null;
+
+      final taluka = talukas.firstWhere(
+        (t) => t['id'].toString() == talukaId,
+        orElse: () => null,
+      );
+
+      if (taluka != null && taluka['villages'] != null) {
+        villages.assignAll(taluka['villages']);
+      }
+    } catch (e) {
+      print('Error fetching villages: $e');
+    }
+  }
+
+  // Load users from API
+  Future<void> loadUsers() async {
+    isLoadingUsers.value = true;
+    userLoadError.value = '';
+
+    try {
+      final usersData = await adminService.getAllUsers();
+      users.value = usersData
+          .map((userData) => UserModel.fromJson(userData))
+          .where(
+            (user) => user.email.isNotEmpty,
+          ) // Only include users with email
+          .toList();
+
+      if (users.isEmpty) {
+        userLoadError.value = 'No users with email addresses found';
+      }
+    } catch (e) {
+      userLoadError.value = 'Failed to load users: $e';
+      print('Error loading users: $e');
+    } finally {
+      isLoadingUsers.value = false;
+    }
   }
 
   @override
   void onClose() {
-    toEmailController.dispose();
     subjectController.dispose();
     messageController.dispose();
     aiMessageController.dispose();
@@ -56,14 +216,8 @@ class SendEmailController extends GetxController {
   }
 
   Future<void> sendEmail() async {
-    final toEmail = toEmailController.text.trim();
     final subject = subjectController.text.trim();
     final message = messageController.text.trim();
-
-    if (toEmail.isEmpty) {
-      UiUtils.showErrorSnackbar('Error', 'Please enter recipient email');
-      return;
-    }
 
     if (subject.isEmpty) {
       UiUtils.showErrorSnackbar('Error', 'Please enter subject');
@@ -81,32 +235,55 @@ class SendEmailController extends GetxController {
     );
 
     try {
-      // Choose all selected senders; if none selected, default to the first available sender
-      final senders = selectedSenders.isEmpty
-          ? [availableSenders.first]
-          : List<String>.from(selectedSenders);
-
-      bool allSuccess = true;
-      for (final sender in senders) {
-        final ok = await EmailService.sendEmail(
-          toEmail: toEmail,
-          subject: subject,
-          message: message,
-          senderEmail: sender,
-          senderName: 'Smart Shetkari',
+      // Validate that users are loaded
+      if (filteredUsers.isEmpty) {
+        Get.back();
+        UiUtils.showErrorSnackbar(
+          'Error',
+          'No users found with the selected filters.',
         );
-        if (!ok) allSuccess = false;
+        return;
       }
+
+      // Get emails from filtered users
+      final senders = filteredUsers.map((u) => u.email).toList();
+
+      // Create EmailService instance
+      final emailService = EmailService();
+
+      // Send email with single or multiple senders
+      final response = await emailService.sendEmail(
+        subject: subject,
+        message: message,
+        senderEmail: senders.length == 1 ? senders.first : senders,
+      );
 
       Get.back(); // Close loading
 
-      if (allSuccess) {
-        UiUtils.showSuccessSnackbar('Success', 'Email sent successfully to $toEmail');
-        toEmailController.clear();
+      // Check response success
+      if (response['success'] == true) {
+        final totalSent = response['totalSent'] ?? senders.length;
+        UiUtils.showSuccessSnackbar(
+          'Success',
+          'Email sent successfully from $totalSent sender(s)',
+        );
         subjectController.clear();
         messageController.clear();
       } else {
-        UiUtils.showErrorSnackbar('Error', 'One or more emails failed to send. Please check logs.');
+        // Partial success or failure
+        final totalSent = response['totalSent'] ?? 0;
+        final totalFailed = response['totalFailed'] ?? 0;
+        if (totalSent > 0) {
+          UiUtils.showErrorSnackbar(
+            'Partial Success',
+            '$totalSent email(s) sent, $totalFailed failed. Check logs for details.',
+          );
+        } else {
+          UiUtils.showErrorSnackbar(
+            'Error',
+            'Failed to send emails. Please try again.',
+          );
+        }
       }
     } catch (e) {
       Get.back();
@@ -138,7 +315,8 @@ class SendEmailController extends GetxController {
           'messages': [
             {
               'role': 'system',
-              'content': 'You are a helpful assistant that helps write professional emails. Generate concise, clear email content based on the user\'s prompts.'
+              'content':
+                  'You are a helpful assistant that helps write professional emails. Generate concise, clear email content based on the user\'s prompts.',
             },
             {'role': 'user', 'content': prompt},
           ],
@@ -148,16 +326,20 @@ class SendEmailController extends GetxController {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         final aiResponse = responseData['choices'][0]['message']['content'];
-        
+
         chatMessages.add(ChatMessage(text: aiResponse, isUser: false));
       } else {
-        throw Exception('Failed to get response from DeepSeek API: ${response.statusCode}');
+        throw Exception(
+          'Failed to get response from DeepSeek API: ${response.statusCode}',
+        );
       }
     } catch (e) {
-      chatMessages.add(ChatMessage(
-        text: 'Sorry, I encountered an error. Please try again.',
-        isUser: false,
-      ));
+      chatMessages.add(
+        ChatMessage(
+          text: 'Sorry, I encountered an error. Please try again.',
+          isUser: false,
+        ),
+      );
       UiUtils.showErrorSnackbar('Error', 'Failed to generate email: $e');
     } finally {
       isGenerating.value = false;
@@ -169,11 +351,17 @@ class SendEmailController extends GetxController {
     UiUtils.showSuccessSnackbar('Copied', 'Email content copied to clipboard');
   }
 
-  Future<void> startListening(TextEditingController controller, RxBool listeningState) async {
+  Future<void> startListening(
+    TextEditingController controller,
+    RxBool listeningState,
+  ) async {
     // Request microphone permission
     final status = await Permission.microphone.request();
     if (!status.isGranted) {
-      UiUtils.showErrorSnackbar('Permission Denied', 'Microphone permission is required for voice input');
+      UiUtils.showErrorSnackbar(
+        'Permission Denied',
+        'Microphone permission is required for voice input',
+      );
       return;
     }
 
@@ -185,7 +373,10 @@ class SendEmailController extends GetxController {
       },
       onError: (error) {
         listeningState.value = false;
-        UiUtils.showErrorSnackbar('Error', 'Voice recognition error: ${error.errorMsg}');
+        UiUtils.showErrorSnackbar(
+          'Error',
+          'Voice recognition error: ${error.errorMsg}',
+        );
       },
     );
 
@@ -242,40 +433,49 @@ class SendEmailWidget extends StatelessWidget {
                 ),
               ],
             ),
-            child: Obx(() => Row(
-              children: [
-                Expanded(
-                  child: _buildToggleButton(
-                    'Send Email',
-                    Icons.email,
-                    0,
-                    controller,
+            child: Obx(
+              () => Row(
+                children: [
+                  Expanded(
+                    child: _buildToggleButton(
+                      'Send Email',
+                      Icons.email,
+                      0,
+                      controller,
+                    ),
                   ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _buildToggleButton(
-                    'Generate Email',
-                    Icons.auto_awesome,
-                    1,
-                    controller,
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: _buildToggleButton(
+                      'Generate Email',
+                      Icons.auto_awesome,
+                      1,
+                      controller,
+                    ),
                   ),
-                ),
-              ],
-            )),
+                ],
+              ),
+            ),
           ),
           // Content
           Expanded(
-            child: Obx(() => controller.selectedTab.value == 0
-                ? _buildSendEmailSection(controller)
-                : _buildAIChatSection(controller)),
+            child: Obx(
+              () => controller.selectedTab.value == 0
+                  ? _buildSendEmailSection(controller)
+                  : _buildAIChatSection(controller),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildToggleButton(String label, IconData icon, int index, SendEmailController controller) {
+  Widget _buildToggleButton(
+    String label,
+    IconData icon,
+    int index,
+    SendEmailController controller,
+  ) {
     final isSelected = controller.selectedTab.value == index;
     return Material(
       color: isSelected ? Color(0xFF7BB53B) : Colors.grey[200],
@@ -299,7 +499,9 @@ class SendEmailWidget extends StatelessWidget {
                   label,
                   style: TextStyle(
                     color: isSelected ? Colors.white : Colors.grey[700],
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                     fontSize: 14,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -336,91 +538,134 @@ class SendEmailWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'From (verified sender)',
+                  'Filter Recipients by Location',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF2A6E9B),
                   ),
                 ),
-                SizedBox(height: 12),
-                Obx(() => Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: controller.availableSenders.map((email) {
-                        final isSelected = controller.selectedSenders.contains(email);
-                        return FilterChip(
-                          label: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: 220),
-                            child: Text(
-                              email,
-                              overflow: TextOverflow.ellipsis,
+                SizedBox(height: 16),
+
+                // State Dropdown
+                Obx(
+                  () => _buildDropdown(
+                    label: 'State',
+                    value: controller.selectedState.value,
+                    items: controller.states,
+                    onChanged: (val) {
+                      controller.selectedState.value = val;
+                      if (val != null) controller.fetchDistricts(val);
+                    },
+                  ),
+                ),
+
+                // District Dropdown
+                Obx(
+                  () => controller.selectedState.value != null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 12),
+                            _buildDropdown(
+                              label: 'District',
+                              value: controller.selectedDistrict.value,
+                              items: controller.districts,
+                              onChanged: (val) {
+                                controller.selectedDistrict.value = val;
+                                if (val != null) controller.fetchTalukas(val);
+                              },
                             ),
-                          ),
-                          selected: isSelected,
-                          onSelected: (val) {
-                            if (val) {
-                              controller.selectedSenders.add(email);
-                            } else {
-                              controller.selectedSenders.remove(email);
-                            }
-                          },
-                          selectedColor: const Color(0xFF7BB53B).withOpacity(0.2),
-                          checkmarkColor: const Color(0xFF7BB53B),
-                          avatar: const Icon(Icons.account_circle, size: 18, color: Color(0xFF7BB53B)),
-                        );
-                      }).toList(),
-                    )),
-              ],
-            ),
-          ),
-          SizedBox(height: 16),
-          // To Email
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
+                          ],
+                        )
+                      : SizedBox.shrink(),
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'To Email',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2A6E9B),
-                  ),
+
+                // Taluka Dropdown
+                Obx(
+                  () => controller.selectedDistrict.value != null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 12),
+                            _buildDropdown(
+                              label: 'Taluka',
+                              value: controller.selectedTaluka.value,
+                              items: controller.talukas,
+                              onChanged: (val) {
+                                controller.selectedTaluka.value = val;
+                                if (val != null) controller.fetchVillages(val);
+                              },
+                            ),
+                          ],
+                        )
+                      : SizedBox.shrink(),
                 ),
+
+                // Village Dropdown
+                Obx(
+                  () => controller.selectedTaluka.value != null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 12),
+                            _buildDropdown(
+                              label: 'Village',
+                              value: controller.selectedVillage.value,
+                              items: controller.villages,
+                              onChanged: (val) {
+                                controller.selectedVillage.value = val;
+                              },
+                            ),
+                          ],
+                        )
+                      : SizedBox.shrink(),
+                ),
+
+                SizedBox(height: 20),
+                Divider(),
                 SizedBox(height: 12),
-                TextField(
-                  controller: controller.toEmailController,
-                  decoration: InputDecoration(
-                    hintText: 'recipient@example.com',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
+
+                // Recipient Count
+                Obx(() {
+                  final count = controller.filteredUsers.length;
+                  return Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF7BB53B).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Color(0xFF7BB53B).withOpacity(0.3),
+                      ),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    child: Row(
+                      children: [
+                        Icon(Icons.people, color: Color(0xFF7BB53B)),
+                        SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Target Audience',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            Text(
+                              '$count Farmers',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D323A),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Color(0xFF7BB53B), width: 2),
-                    ),
-                    prefixIcon: Icon(Icons.mail_outline, color: Color(0xFF7BB53B)),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
+                  );
+                }),
               ],
             ),
           ),
@@ -451,38 +696,52 @@ class SendEmailWidget extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 12),
-                Obx(() => TextField(
-                  controller: controller.subjectController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter subject...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Color(0xFF7BB53B), width: 2),
-                    ),
-                    prefixIcon: Icon(Icons.subject, color: Color(0xFF7BB53B)),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        controller.isListeningSubject.value ? Icons.mic : Icons.mic_none,
-                        color: controller.isListeningSubject.value ? Colors.red : Color(0xFF7BB53B),
+                Obx(
+                  () => TextField(
+                    controller: controller.subjectController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter subject...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
-                      onPressed: () {
-                        if (controller.isListeningSubject.value) {
-                          controller.stopListening(controller.isListeningSubject);
-                        } else {
-                          controller.startListening(controller.subjectController, controller.isListeningSubject);
-                        }
-                      },
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Color(0xFF7BB53B),
+                          width: 2,
+                        ),
+                      ),
+                      prefixIcon: Icon(Icons.subject, color: Color(0xFF7BB53B)),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          controller.isListeningSubject.value
+                              ? Icons.mic
+                              : Icons.mic_none,
+                          color: controller.isListeningSubject.value
+                              ? Colors.red
+                              : Color(0xFF7BB53B),
+                        ),
+                        onPressed: () {
+                          if (controller.isListeningSubject.value) {
+                            controller.stopListening(
+                              controller.isListeningSubject,
+                            );
+                          } else {
+                            controller.startListening(
+                              controller.subjectController,
+                              controller.isListeningSubject,
+                            );
+                          }
+                        },
+                      ),
                     ),
                   ),
-                )),
+                ),
               ],
             ),
           ),
@@ -513,41 +772,55 @@ class SendEmailWidget extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 12),
-                Obx(() => TextField(
-                  controller: controller.messageController,
-                  maxLines: 10,
-                  decoration: InputDecoration(
-                    hintText: 'Type your email message here...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Color(0xFF7BB53B), width: 2),
-                    ),
-                    suffixIcon: Padding(
-                      padding: EdgeInsets.only(top: 8, right: 8),
-                      child: IconButton(
-                        icon: Icon(
-                          controller.isListeningMessage.value ? Icons.mic : Icons.mic_none,
-                          color: controller.isListeningMessage.value ? Colors.red : Color(0xFF7BB53B),
+                Obx(
+                  () => TextField(
+                    controller: controller.messageController,
+                    maxLines: 10,
+                    decoration: InputDecoration(
+                      hintText: 'Type your email message here...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Color(0xFF7BB53B),
+                          width: 2,
                         ),
-                        onPressed: () {
-                          if (controller.isListeningMessage.value) {
-                            controller.stopListening(controller.isListeningMessage);
-                          } else {
-                            controller.startListening(controller.messageController, controller.isListeningMessage);
-                          }
-                        },
+                      ),
+                      suffixIcon: Padding(
+                        padding: EdgeInsets.only(top: 8, right: 8),
+                        child: IconButton(
+                          icon: Icon(
+                            controller.isListeningMessage.value
+                                ? Icons.mic
+                                : Icons.mic_none,
+                            color: controller.isListeningMessage.value
+                                ? Colors.red
+                                : Color(0xFF7BB53B),
+                          ),
+                          onPressed: () {
+                            if (controller.isListeningMessage.value) {
+                              controller.stopListening(
+                                controller.isListeningMessage,
+                              );
+                            } else {
+                              controller.startListening(
+                                controller.messageController,
+                                controller.isListeningMessage,
+                              );
+                            }
+                          },
+                        ),
                       ),
                     ),
                   ),
-                )),
+                ),
               ],
             ),
           ),
@@ -654,54 +927,71 @@ class SendEmailWidget extends StatelessWidget {
                             },
                           ),
                         ),
-                        Obx(() => IconButton(
-                          icon: Icon(
-                            controller.isListeningAI.value ? Icons.mic : Icons.mic_none,
-                            color: controller.isListeningAI.value ? Colors.red : Color(0xFF7BB53B),
+                        Obx(
+                          () => IconButton(
+                            icon: Icon(
+                              controller.isListeningAI.value
+                                  ? Icons.mic
+                                  : Icons.mic_none,
+                              color: controller.isListeningAI.value
+                                  ? Colors.red
+                                  : Color(0xFF7BB53B),
+                            ),
+                            onPressed: () {
+                              if (controller.isListeningAI.value) {
+                                controller.stopListening(
+                                  controller.isListeningAI,
+                                );
+                              } else {
+                                controller.startListening(
+                                  controller.aiMessageController,
+                                  controller.isListeningAI,
+                                );
+                              }
+                            },
                           ),
-                          onPressed: () {
-                            if (controller.isListeningAI.value) {
-                              controller.stopListening(controller.isListeningAI);
-                            } else {
-                              controller.startListening(controller.aiMessageController, controller.isListeningAI);
-                            }
-                          },
-                        )),
+                        ),
                       ],
                     ),
                   ),
                 ),
                 SizedBox(width: 12),
-                Obx(() => controller.isGenerating.value
-                    ? SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Color(0xFF7BB53B),
+                Obx(
+                  () => controller.isGenerating.value
+                      ? SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF7BB53B),
+                            ),
                           ),
-                        ),
-                      )
-                    : Material(
-                        color: Color(0xFF7BB53B),
-                        borderRadius: BorderRadius.circular(24),
-                        child: InkWell(
-                          onTap: () {
-                            final text = controller.aiMessageController.text;
-                            if (text.trim().isNotEmpty) {
-                              controller.generateEmailWithAI(text);
-                            }
-                          },
+                        )
+                      : Material(
+                          color: Color(0xFF7BB53B),
                           borderRadius: BorderRadius.circular(24),
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            alignment: Alignment.center,
-                            child: Icon(Icons.send, color: Colors.white, size: 22),
+                          child: InkWell(
+                            onTap: () {
+                              final text = controller.aiMessageController.text;
+                              if (text.trim().isNotEmpty) {
+                                controller.generateEmailWithAI(text);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.send,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
                           ),
                         ),
-                      )),
+                ),
               ],
             ),
           ),
@@ -717,7 +1007,9 @@ class SendEmailWidget extends StatelessWidget {
         margin: EdgeInsets.only(bottom: 12),
         constraints: BoxConstraints(maxWidth: 300),
         child: Column(
-          crossAxisAlignment: message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: message.isUser
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Container(
               padding: EdgeInsets.all(12),
@@ -760,6 +1052,35 @@ class SendEmailWidget extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String? value,
+    required List<dynamic> items,
+    required Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      items: [
+        DropdownMenuItem<String>(value: null, child: Text('Select $label')),
+        ...items.map((item) {
+          return DropdownMenuItem<String>(
+            value: item['id'].toString(),
+            child: Text(item['name']),
+          );
+        }),
+      ],
+      onChanged: onChanged,
     );
   }
 }

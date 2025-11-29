@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/authServices.dart';
+import '../../../utils/ui_utils.dart';
 
 class LoginsignupController extends GetxController {
   // Observable to toggle between login and signup
@@ -89,11 +90,9 @@ class LoginsignupController extends GetxController {
           await prefs.setString('user_data', jsonEncode(response['data']));
         }
 
-        Get.snackbar(
+        UiUtils.showSuccessSnackbar(
           'Success',
           response['message'] ?? 'Login successful',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
         );
 
         // Navigate based on role

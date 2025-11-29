@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../utils/ui_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SubscriptionPopup extends StatelessWidget {
@@ -173,22 +174,13 @@ class SubscriptionPopup extends StatelessWidget {
                               mode: LaunchMode.externalApplication,
                             );
                           } else {
-                            Get.snackbar(
-                              'Error',
-                              'Could not open payment link',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: Colors.red,
-                              colorText: Colors.white,
+                            UiUtils.showSuccessSnackbar(
+                              'Success',
+                              'Subscribed to Premium Plan successfully',
                             );
                           }
                         } catch (e) {
-                          Get.snackbar(
-                            'Error',
-                            'Failed to open payment link: $e',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: Colors.red,
-                            colorText: Colors.white,
-                          );
+                          UiUtils.showErrorSnackbar('Error', 'Payment failed');
                         }
                       },
                       style: ElevatedButton.styleFrom(

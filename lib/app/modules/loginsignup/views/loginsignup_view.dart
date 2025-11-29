@@ -66,10 +66,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
             ],
           ),
           child: ClipOval(
-            child: Image.asset(
-              'assets/images/smartshetkari.png',
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset('assets/images/finalbg.png', fit: BoxFit.cover),
           ),
         ),
         const SizedBox(height: 16),

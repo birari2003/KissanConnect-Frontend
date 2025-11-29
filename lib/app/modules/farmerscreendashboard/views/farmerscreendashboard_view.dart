@@ -4,6 +4,11 @@ import '../controllers/farmerscreendashboard_controller.dart';
 import '../../../widhets/registration_form_widget.dart';
 import '../../../widhets/setting_widget.dart';
 import '../../../widhets/crop_claim.dart';
+import '../../../widhets/sellCrop.dart';
+import '../../../widhets/query_popup.dart';
+import '../../../widhets/cropList.dart';
+import '../../../widhets/govSchema.dart';
+import '../../../widhets/jobApplication.dart';
 
 class FarmerscreendashboardView
     extends GetView<FarmerscreendashboardController> {
@@ -65,25 +70,47 @@ class FarmerscreendashboardView
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: const Icon(
-                    Icons.agriculture,
-                    color: Color(0xFF2E8B57),
-                    size: 56,
+                Obx(
+                  () => Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: controller.farmerPhoto.value.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(100),
+                            child: Image.network(
+                              'http://192.168.43.43:5000/uploads/${controller.farmerPhoto.value}',
+                              width: 56,
+                              height: 56,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.agriculture,
+                                  color: Color(0xFF2E8B57),
+                                  size: 56,
+                                );
+                              },
+                            ),
+                          )
+                        : const Icon(
+                            Icons.agriculture,
+                            color: Color(0xFF2E8B57),
+                            size: 56,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Farmer Panel',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Obx(
+                  () => Text(
+                    controller.farmerName.value,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -110,7 +137,7 @@ class FarmerscreendashboardView
                     ),
                     _buildNavItem(
                       icon: Icons.app_registration,
-                      title: 'Registration',
+                      title: 'My Profile',
                       index: 1,
                       isSelected: controller.selectedIndex.value == 1,
                     ),
@@ -119,6 +146,30 @@ class FarmerscreendashboardView
                       title: 'Crop Claim',
                       index: 2,
                       isSelected: controller.selectedIndex.value == 2,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.storefront,
+                      title: 'Sell Crop',
+                      index: 4,
+                      isSelected: controller.selectedIndex.value == 4,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.shopping_basket,
+                      title: 'Marketplace',
+                      index: 5,
+                      isSelected: controller.selectedIndex.value == 5,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.account_balance,
+                      title: 'Gov Schemes',
+                      index: 6,
+                      isSelected: controller.selectedIndex.value == 6,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.work,
+                      title: 'Jobs',
+                      index: 7,
+                      isSelected: controller.selectedIndex.value == 7,
                     ),
                     _buildNavItem(
                       icon: Icons.settings,
@@ -205,7 +256,7 @@ class FarmerscreendashboardView
         case 1:
           return _buildPageWithHeader(
             context,
-            'Registration',
+            'My Profile',
             Icons.app_registration,
             _buildRegistrationTab(),
           );
@@ -222,6 +273,34 @@ class FarmerscreendashboardView
             'Settings',
             Icons.settings,
             _buildSettingsTab(),
+          );
+        case 4:
+          return _buildPageWithHeader(
+            context,
+            'Sell Crop',
+            Icons.storefront,
+            _buildSellCropTab(),
+          );
+        case 5:
+          return _buildPageWithHeader(
+            context,
+            'Marketplace',
+            Icons.shopping_basket,
+            _buildMarketplaceTab(),
+          );
+        case 6:
+          return _buildPageWithHeader(
+            context,
+            'Government Schemes',
+            Icons.account_balance,
+            const GovSchema(),
+          );
+        case 7:
+          return _buildPageWithHeader(
+            context,
+            'Job Applications',
+            Icons.work,
+            const JobApplication(),
           );
         default:
           return _buildPageWithHeader(
@@ -315,11 +394,13 @@ class FarmerscreendashboardView
       child: SafeArea(
         child: CustomScrollView(
           slivers: [
-            _buildAppBar(),
+            // _buildAppBar(),
             SliverToBoxAdapter(
               child: Column(
                 children: [
                   _buildWelcomeCard(),
+                  const SizedBox(height: 24),
+                  _buildMessagesSection(),
                   const SizedBox(height: 24),
                   _buildRequestStatusSection(),
                   const SizedBox(height: 24),
@@ -423,17 +504,29 @@ class FarmerscreendashboardView
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 32,
+                    Obx(
+                      () => Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          image: controller.farmerPhoto.value.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(
+                                    'http://192.168.43.43:5000/uploads/${controller.farmerPhoto.value}',
+                                  ),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: controller.farmerPhoto.value.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 32,
+                              )
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -461,22 +554,25 @@ class FarmerscreendashboardView
                           ),
                           const SizedBox(height: 2),
                           Obx(
-                            () => Row(
-                              children: [
-                                const Icon(
-                                  Icons.location_on,
-                                  color: Colors.white70,
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  controller.farmLocation.value,
-                                  style: const TextStyle(
+                            () => SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.location_on,
                                     color: Colors.white70,
-                                    fontSize: 12,
+                                    size: 14,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    controller.farmLocation.value,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -488,6 +584,261 @@ class FarmerscreendashboardView
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildMessagesSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.message, color: Color(0xFF2E8B57), size: 24),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Messages from Admin',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D323A),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8),
+              // Ask Your Query Button
+              ElevatedButton.icon(
+                onPressed: () {
+                  Get.dialog(QueryPopup());
+                },
+                icon: Icon(Icons.question_answer, size: 18),
+                label: Text('Ask Query'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF2E8B57),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Obx(() {
+            // Loading state
+            if (controller.isLoadingMessages.value) {
+              return Container(
+                padding: EdgeInsets.all(40),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF2E8B57)),
+                      SizedBox(height: 12),
+                      Text(
+                        'Loading messages...',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Empty state
+            if (controller.messages.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF2E8B57).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.mark_email_unread_outlined,
+                        size: 48,
+                        color: Color(0xFF2E8B57),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'No New Messages',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D323A),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Important updates from the admin\nwill appear here.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Messages list
+            return Column(
+              children: controller.messages.map((message) {
+                return _buildMessageCard(message);
+              }).toList(),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageCard(dynamic message) {
+    final messageText = message['message'] ?? 'No message';
+    final senderName = message['sender_name'] ?? 'Admin';
+    final senderRole = message['sender_role'] ?? 'admin';
+    final createdAt = message['created_at'] ?? '';
+
+    // Format date
+    String formattedDate = '';
+    if (createdAt.isNotEmpty) {
+      try {
+        final date = DateTime.parse(createdAt);
+        formattedDate = '${date.day}/${date.month}/${date.year}';
+      } catch (e) {
+        formattedDate = createdAt;
+      }
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border(
+          left: BorderSide(
+            color: senderRole == 'super_admin'
+                ? Color(0xFF5CC96F)
+                : Color(0xFF2E8B57),
+            width: 4,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color:
+                        (senderRole == 'super_admin'
+                                ? Color(0xFF5CC96F)
+                                : Color(0xFF2E8B57))
+                            .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    senderRole == 'super_admin'
+                        ? Icons.admin_panel_settings
+                        : Icons.support_agent,
+                    color: senderRole == 'super_admin'
+                        ? Color(0xFF5CC96F)
+                        : Color(0xFF2E8B57),
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        senderName,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D323A),
+                        ),
+                      ),
+                      Text(
+                        senderRole == 'super_admin' ? 'Super Admin' : 'Admin',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                if (formattedDate.isNotEmpty)
+                  Text(
+                    formattedDate,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              messageText,
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF2D323A),
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -641,17 +992,17 @@ class FarmerscreendashboardView
   Widget _buildAcceptedCard() {
     return Container(
       key: const ValueKey('accepted'),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [const Color(0xFF2E8B57), const Color(0xFF5CC96F)],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF2E8B57).withOpacity(0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2E8B57).withOpacity(0.4),
+            color: const Color(0xFF2E8B57).withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -659,75 +1010,28 @@ class FarmerscreendashboardView
       ),
       child: Column(
         children: [
-          TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 800),
-            tween: Tween<double>(begin: 0, end: 1),
-            builder: (context, double value, child) {
-              return Transform.scale(
-                scale: value,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_circle,
-                    color: Colors.white,
-                    size: 60,
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Request Accepted!',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Congratulations! Your request has been approved.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.white70),
-          ),
-          const SizedBox(height: 24),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+              color: Color(0xFFE8F5E9),
+              shape: BoxShape.circle,
             ),
-            child: Column(
-              children: [
-                _buildInfoRow('Request ID', '#REQ-2024-001', Colors.white),
-                const SizedBox(height: 8),
-                _buildInfoRow('Approved Date', '09 Nov 2024', Colors.white),
-                const SizedBox(height: 8),
-                _buildInfoRow('Status', 'Active', Colors.white),
-              ],
-            ),
+            child: Icon(Icons.check_circle, color: Color(0xFF2E8B57), size: 48),
           ),
           const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF2E8B57),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+          const Text(
+            'Request Approved',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E8B57),
             ),
-            child: const Text(
-              'View Details',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Your registration has been verified and approved.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 15, color: Colors.grey),
           ),
         ],
       ),
@@ -737,17 +1041,14 @@ class FarmerscreendashboardView
   Widget _buildRejectedCard() {
     return Container(
       key: const ValueKey('rejected'),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.red.shade400, Colors.red.shade600],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.red.withOpacity(0.3), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.4),
+            color: Colors.red.withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -755,99 +1056,28 @@ class FarmerscreendashboardView
       ),
       child: Column(
         children: [
-          TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 800),
-            tween: Tween<double>(begin: 0, end: 1),
-            builder: (context, double value, child) {
-              return Transform.scale(
-                scale: value,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.cancel,
-                    color: Colors.white,
-                    size: 60,
-                  ),
-                ),
-              );
-            },
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.cancel, color: Colors.red, size: 48),
           ),
           const SizedBox(height: 20),
           const Text(
             'Request Rejected',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Colors.red,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Text(
-            'Unfortunately, your request was not approved.',
+            'Your registration request was not approved.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.white70),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                _buildInfoRow('Request ID', '#REQ-2024-002', Colors.white),
-                const SizedBox(height: 8),
-                _buildInfoRow('Rejected Date', '08 Nov 2024', Colors.white),
-                const SizedBox(height: 8),
-                _buildInfoRow('Reason', 'Incomplete Documents', Colors.white),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.red.shade600,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Resubmit',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white, width: 2),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Contact',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
+            style: TextStyle(fontSize: 15, color: Colors.grey),
           ),
         ],
       ),
@@ -857,17 +1087,17 @@ class FarmerscreendashboardView
   Widget _buildPendingCard() {
     return Container(
       key: const ValueKey('pending'),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [const Color(0xFFFFC300), const Color(0xFFFFD700)],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFFFC300).withOpacity(0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFFC300).withOpacity(0.4),
+            color: const Color(0xFFFFC300).withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -875,130 +1105,35 @@ class FarmerscreendashboardView
       ),
       child: Column(
         children: [
-          TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 1500),
-            tween: Tween<double>(begin: 0, end: 1),
-            builder: (context, double value, child) {
-              return Transform.rotate(
-                angle: value * 2 * 3.14159,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.hourglass_empty,
-                    color: Colors.white,
-                    size: 60,
-                  ),
-                ),
-              );
-            },
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Color(0xFFFFF8E1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.hourglass_top,
+              color: Color(0xFFFFC300),
+              size: 48,
+            ),
           ),
           const SizedBox(height: 20),
           const Text(
             'Request Pending',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Color(0xFFFFC300),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Text(
-            'Your request is under review. Please wait for approval.',
+            'Your request is currently under review.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.white70),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                _buildInfoRow('Request ID', '#REQ-2024-003', Colors.white),
-                const SizedBox(height: 8),
-                _buildInfoRow('Submitted Date', '07 Nov 2024', Colors.white),
-                const SizedBox(height: 8),
-                _buildInfoRow('Est. Review Time', '2-3 Days', Colors.white),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Animated progress indicator
-          TweenAnimationBuilder(
-            duration: const Duration(seconds: 2),
-            tween: Tween<double>(begin: 0, end: 0.6),
-            builder: (context, double value, child) {
-              return Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: value,
-                      backgroundColor: Colors.white.withOpacity(0.3),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.white,
-                      ),
-                      minHeight: 8,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${(value * 100).toInt()}% Reviewed',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFFFFC300),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Track Status',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            style: TextStyle(fontSize: 15, color: Colors.grey),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(color: color.withOpacity(0.8), fontSize: 14),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
     );
   }
 
@@ -1022,5 +1157,13 @@ class FarmerscreendashboardView
 
   Widget _buildCropClaimTab() {
     return const CropClaimWidget();
+  }
+
+  Widget _buildSellCropTab() {
+    return const SellCropWidget();
+  }
+
+  Widget _buildMarketplaceTab() {
+    return const CropListWidget();
   }
 }

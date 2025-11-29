@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../utils/ui_utils.dart';
 import '../../../services/adminServices.dart';
 
 class AdminpanelController extends GetxController {
@@ -9,6 +12,10 @@ class AdminpanelController extends GetxController {
 
   // Observable for tracking side navigation visibility
   final isNavigationOpen = false.obs;
+
+  // User Data
+  final userName = 'Admin User'.obs;
+  final userEmail = 'admin@kissan.com'.obs;
 
   // Dashboard statistics observables
   final totalFarmers = 0.obs;
@@ -24,7 +31,22 @@ class AdminpanelController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    loadUserData();
     loadDashboardStats();
+  }
+
+  Future<void> loadUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        userName.value = userData['name'] ?? 'Admin User';
+        userEmail.value = userData['email'] ?? 'admin@kissan.com';
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
   }
 
   @override
@@ -104,11 +126,7 @@ class AdminpanelController extends GetxController {
       totalTalukas.value = talukaCount;
     } catch (e) {
       print('Error loading dashboard stats: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load dashboard statistics',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      UiUtils.showErrorSnackbar('Error', 'Failed to load dashboard statistics');
     } finally {
       isLoadingStats.value = false;
     }

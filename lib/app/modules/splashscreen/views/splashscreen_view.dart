@@ -239,7 +239,7 @@ class _SplashScreenViewState extends State<SplashScreenView>
                                 ],
                               ),
                               child: Image.asset(
-                                'assets/images/smartshetkari.png',
+                                'assets/images/finalBG_no.png',
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -280,7 +280,7 @@ class _SplashScreenViewState extends State<SplashScreenView>
                                   ).createShader(bounds);
                                 },
                                 child: const Text(
-                                  'Smart SHetkaरी',
+                                  'Smart Shetkaरी',
                                   style: TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../../../services/adminServices.dart';
 import 'package:http/http.dart' as http;
+import '../../../utils/ui_utils.dart';
 
 class Farmer {
   final String id; // farmer_profile.id
@@ -196,12 +197,9 @@ class FarmerslistController extends GetxController {
       farmers.value = allFarmers;
     } catch (e) {
       print('Error loading farmers: $e');
-      Get.snackbar(
+      UiUtils.showErrorSnackbar(
         'Error',
         'Failed to load farmers: ${e.toString().replaceAll('Exception: ', '')}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        duration: Duration(seconds: 3),
       );
       // Keep empty list on error
       farmers.value = [];
@@ -271,21 +269,12 @@ class FarmerslistController extends GetxController {
         farmers.refresh();
       }
 
-      Get.snackbar(
-        'Success',
-        'Farmer approved successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-        duration: Duration(seconds: 2),
-      );
+      UiUtils.showSuccessSnackbar('Success', 'Farmer approved successfully');
     } catch (e) {
       print('Error approving farmer: $e');
-      Get.snackbar(
+      UiUtils.showErrorSnackbar(
         'Error',
         'Failed to approve farmer: ${e.toString().replaceAll('Exception: ', '')}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        duration: Duration(seconds: 3),
       );
     }
   }
@@ -322,21 +311,12 @@ class FarmerslistController extends GetxController {
         farmers.refresh();
       }
 
-      Get.snackbar(
-        'Success',
-        'Farmer rejected',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        duration: Duration(seconds: 2),
-      );
+      UiUtils.showSuccessSnackbar('Success', 'Farmer rejected');
     } catch (e) {
       print('Error rejecting farmer: $e');
-      Get.snackbar(
+      UiUtils.showErrorSnackbar(
         'Error',
         'Failed to reject farmer: ${e.toString().replaceAll('Exception: ', '')}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        duration: Duration(seconds: 3),
       );
     }
   }
@@ -424,12 +404,7 @@ class FarmerslistController extends GetxController {
 
   Future<void> assignSuperAdmin(String farmerId) async {
     if (selectedStateId.value == null) {
-      Get.snackbar(
-        'Error',
-        'Please select at least a state',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-      );
+      UiUtils.showErrorSnackbar('Error', 'Please select at least a state');
       return;
     }
 
@@ -483,21 +458,15 @@ class FarmerslistController extends GetxController {
       resetSuperAdminSelection();
       Get.back(); // Close bottom sheet
 
-      Get.snackbar(
+      UiUtils.showSuccessSnackbar(
         'Success',
         'Super Admin assigned successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-        duration: Duration(seconds: 2),
       );
     } catch (e) {
       print('Error assigning super admin: $e');
-      Get.snackbar(
+      UiUtils.showErrorSnackbar(
         'Error',
         'Failed to assign super admin: ${e.toString().replaceAll('Exception: ', '')}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        duration: Duration(seconds: 3),
       );
     }
   }

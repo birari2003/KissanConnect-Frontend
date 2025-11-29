@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../../services/adminServices.dart';
+import '../../../utils/ui_utils.dart';
 
 class SuperAdmin {
   final String id;
@@ -146,22 +147,16 @@ class SuperadminlistController extends GetxController {
         recipientIds: recipientIds,
       );
 
-      Get.snackbar(
+      UiUtils.showSuccessSnackbar(
         'Success',
-        'Message sent to ${selectedIds.length} super admin(s)',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.primary.withOpacity(0.1),
-        duration: Duration(seconds: 2),
+        'Super Admin revoked successfully',
       );
       clearSelection();
     } catch (e) {
       print('Error sending message: $e');
-      Get.snackbar(
+      UiUtils.showErrorSnackbar(
         'Error',
-        'Failed to send message: ${e.toString().replaceAll('Exception: ', '')}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Get.theme.colorScheme.error.withOpacity(0.1),
-        duration: Duration(seconds: 3),
+        'Failed to load super admins: ${e.toString().replaceAll('Exception: ', '')}',
       );
     } finally {
       isSending.value = false;

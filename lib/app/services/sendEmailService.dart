@@ -1,79 +1,104 @@
-import 'dart:async';
-import 'dart:io';
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class EmailService {
-  // SMTP configuration (Brevo SMTP Relay)
-  // Provided credentials
-  static const String _smtpHost = 'smtp-relay.brevo.com';
-  static const int _smtpPort = 587; // STARTTLS
-  // Brevo SMTP login (not necessarily the same as the From address)
-  static const String _smtpUsername = '9b6ff6001@smtp-brevo.com';
-  static const String _smtpPassword =
-      'xsmtpsib-ec0deaa7ced6fe8ae4d322809c4ac0a0a8504190a6ca0e7ef87c29277aec8a6b-zMrNaei9dcNmWd44';
+  // Base URL for the backend API
+  final String baseUrl;
 
-  // Default from details (can be overridden by the UI)
-  static const String _defaultFromAddress = 'gauravbirari690@gmail.com';
-  static const String _defaultFromName = 'Smart Shetkari';
+  EmailService({this.baseUrl = 'http://192.168.43.43:5000/farmer'});
+  // EmailService({this.baseUrl = 'https://kissanconnect-backend-z00d.onrender.com/farmer'});
 
-  static Future<bool> sendEmail({
-    required String toEmail,
+  /// Send email via backend API
+  ///
+  /// Parameters:
+  /// - [subject]: Email subject (required)
+  /// - [message]: Email message body (required)
+  /// - [senderEmail]: Single email or list of emails (required)
+  ///
+  /// Returns a Map containing the API response with success status and details
+  Future<Map<String, dynamic>> sendEmail({
     required String subject,
     required String message,
-    String? senderEmail,
-    String? senderName,
+    dynamic senderEmail, // Can be String or List<String>
   }) async {
-    final fromEmail = senderEmail?.trim().isNotEmpty == true
-        ? senderEmail!.trim()
-        : _defaultFromAddress;
-    final fromName = senderName?.trim().isNotEmpty == true
-        ? senderName!.trim()
-        : _defaultFromName;
-
-    final htmlContent = '<p>${message.replaceAll('\n', '<br>')}</p>';
-
-    // Configure SMTP server (STARTTLS on port 587)
-    final smtpServer = SmtpServer(
-      _smtpHost,
-      port: _smtpPort,
-      username: _smtpUsername,
-      password: _smtpPassword,
-      // mailer enables STARTTLS automatically on port 587 when available
-      // ssl: false is implicit; do not force SSL on 587
-    );
-
-    final mail = Message()
-      ..from = Address(fromEmail, fromName)
-      ..recipients.add(toEmail)
-      ..subject = subject
-      ..html = htmlContent;
+    final url = Uri.parse('$baseUrl/send-email');
 
     try {
-      final sendReport = await send(mail, smtpServer);
-      // If no exception, treat as success
-      print('✅ Email sent via SMTP. Report: $sendReport');
-      return true;
-    } on MailerException catch (e) {
-      print('❌ SMTP send failed. Problems:');
-      if (e.problems.isEmpty) {
-        print(' - (no detailed problems reported)');
+      // Validate required fields
+      if (subject.trim().isEmpty) {
+        throw Exception('Subject is required');
       }
-      for (final p in e.problems) {
-        print(' - code: ${p.code}, msg: ${p.msg}');
+      if (message.trim().isEmpty) {
+        throw Exception('Message is required');
       }
-      print('Exception: $e');
-      return false;
-    } on SocketException catch (e) {
-      print('❌ Network error while connecting to SMTP server: $e');
-      return false;
-    } on TimeoutException catch (e) {
-      print('❌ SMTP connection timed out: $e');
-      return false;
+      if (senderEmail == null) {
+        throw Exception('Sender email is required');
+      }
+
+      // Prepare request body
+      final Map<String, dynamic> requestBody = {
+        'subject': subject,
+        'message': message,
+        'senderEmail': senderEmail, // Can be single string or array
+      };
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      final data = jsonDecode(response.body);
+
+      // Handle different status codes
+      if (response.statusCode == 200) {
+        // All emails sent successfully
+        print('✅ Email(s) sent successfully: ${data['message']}');
+        return data;
+      } else if (response.statusCode == 207) {
+        // Partial success (some emails sent, some failed)
+        print('⚠️ Partial success: ${data['message']}');
+        return data;
+      } else if (response.statusCode == 400) {
+        // Bad request (validation error)
+        throw Exception(data['message'] ?? 'Invalid request');
+      } else if (response.statusCode == 500) {
+        // Server error (all emails failed)
+        throw Exception(data['message'] ?? 'Failed to send email(s)');
+      } else {
+        throw Exception('Unexpected response: ${response.statusCode}');
+      }
     } catch (e) {
-      print('⚠️ Unexpected error while sending email via SMTP: $e');
-      return false;
+      print('❌ Error sending email: $e');
+      throw Exception('Error sending email: $e');
     }
   }
-}
 
+  /// Convenience method to send email from a single sender
+  static Future<Map<String, dynamic>> sendSingleEmail({
+    required String subject,
+    required String message,
+    required String senderEmail,
+  }) async {
+    final service = EmailService();
+    return await service.sendEmail(
+      subject: subject,
+      message: message,
+      senderEmail: senderEmail,
+    );
+  }
+
+  /// Convenience method to send email from multiple senders
+  static Future<Map<String, dynamic>> sendMultipleEmails({
+    required String subject,
+    required String message,
+    required List<String> senderEmails,
+  }) async {
+    final service = EmailService();
+    return await service.sendEmail(
+      subject: subject,
+      message: message,
+      senderEmail: senderEmails,
+    );
+  }
+}

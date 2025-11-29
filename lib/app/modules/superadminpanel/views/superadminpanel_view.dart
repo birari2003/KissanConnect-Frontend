@@ -9,6 +9,8 @@ import '../../../widhets/setting_widget.dart';
 import '../../../widhets/send_email.dart';
 
 import '../../../widhets/crop_claim.dart';
+import '../../../widhets/createJobApplication.dart';
+import '../../../widhets/jobApplication.dart';
 
 class SuperadminpanelView extends GetView<SuperadminpanelController> {
   const SuperadminpanelView({super.key});
@@ -79,12 +81,14 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
                     ),
                   ),
                   SizedBox(height: 12),
-                  Text(
-                    'Super Admin',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  Obx(
+                    () => Text(
+                      controller.userName.value,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Text(
@@ -104,11 +108,13 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
                   _buildNavItem(1, Icons.send, 'Send Message'),
                   _buildNavItem(2, Icons.email, 'Send Email'),
                   _buildNavItem(3, Icons.agriculture, 'Crop Claim'),
-                  _buildNavItem(4, Icons.app_registration, 'Registration'),
+                  _buildNavItem(4, Icons.app_registration, 'My Profile'),
                   _buildNavItem(5, Icons.pending_actions, 'Request Status'),
-                  _buildNavItem(6, Icons.settings, 'Settings'),
 
                   // New tabs
+                  _buildNavItem(6, Icons.work_outline, 'Create Job'),
+                  _buildNavItem(7, Icons.list_alt, 'Job List'),
+                  _buildNavItem(8, Icons.settings, 'Settings'),
 
                   // _buildNavItem(6, Icons.account_balance, 'Government Schemes'),
                 ],
@@ -212,7 +218,7 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
         case 4:
           return _buildPageWithHeader(
             context,
-            'Registration',
+            'My Profile',
             Icons.app_registration,
             RegistrationForm(selectedLanguage: 'en-US'),
           );
@@ -223,21 +229,28 @@ class SuperadminpanelView extends GetView<SuperadminpanelController> {
             Icons.pending_actions,
             RequestStatusWidget(),
           );
+
         case 6:
+          return _buildPageWithHeader(
+            context,
+            'Create Job',
+            Icons.work_outline,
+            const CreateJobApplication(),
+          );
+        case 7:
+          return _buildPageWithHeader(
+            context,
+            'Job List',
+            Icons.list_alt,
+            const JobApplication(),
+          );
+        case 8:
           return _buildPageWithHeader(
             context,
             'Settings',
             Icons.settings,
             SettingsWidget(selectedLanguage: 'en-US'),
           );
-
-        // case 6:
-        //   return _buildPageWithHeader(
-        //     context,
-        //     'Government Schemes',
-        //     Icons.account_balance,
-        //     const GovernmentSchemeWidget(),
-        //   );
 
         default:
           return _buildPageWithHeader(

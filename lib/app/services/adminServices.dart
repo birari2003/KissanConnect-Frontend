@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AdminService {
   // Replace with your actual backend URL
   final String baseUrl = 'http://192.168.43.43:5000/admin';
+  // final String baseUrl = 'https://kissanconnect-backend-z00d.onrender.com/admin';
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -37,6 +38,95 @@ class AdminService {
       }
     } catch (e) {
       throw Exception('Error fetching locations: $e');
+    }
+  }
+
+  // Get government schemes created by admin
+  Future<List<dynamic>> getSchemes() async {
+    final url = Uri.parse('$baseUrl/get-schemes');
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data'] ?? [];
+      } else {
+        throw Exception('Failed to fetch schemes: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching schemes: $e');
+    }
+  }
+
+  // Get jobs created by admin
+  Future<List<dynamic>> getMyJobs() async {
+    final url = Uri.parse('$baseUrl/my-jobs');
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data'] ?? [];
+      } else {
+        throw Exception('Failed to fetch my jobs: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching my jobs: $e');
+    }
+  }
+
+  // Update job status
+  Future<Map<String, dynamic>> updateJobStatus({
+    required int jobId,
+    required String status,
+  }) async {
+    final url = Uri.parse('$baseUrl/update-job-status/$jobId');
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      final response = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'status': status}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to update job status');
+      }
+    } catch (e) {
+      throw Exception('Error updating job status: $e');
     }
   }
 
@@ -91,6 +181,24 @@ class AdminService {
       }
     } catch (e) {
       throw Exception('Error fetching talukas: $e');
+    }
+  }
+
+  // Get villages by taluka ID
+  Future<List<dynamic>> getVillagesByTaluka(String talukaId) async {
+    final url = Uri.parse('$baseUrl/talukas/$talukaId/villages');
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data'];
+      } else {
+        throw Exception('Failed to fetch villages: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching villages: $e');
     }
   }
 
@@ -267,6 +375,126 @@ class AdminService {
       }
     } catch (e) {
       throw Exception('Error fetching users: $e');
+    }
+  }
+
+  // Create a new government scheme
+  Future<Map<String, dynamic>> createScheme({
+    required String title,
+    required String description,
+    String targetAudience = 'all',
+    String status = 'draft',
+    String? attachmentPath,
+  }) async {
+    final url = Uri.parse('$baseUrl/create-scheme');
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      var request = http.MultipartRequest('POST', url);
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+
+      request.fields['title'] = title;
+      request.fields['description'] = description;
+      request.fields['target_audience'] = targetAudience;
+      request.fields['status'] = status;
+
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        request.files.add(
+          await http.MultipartFile.fromPath('attachment', attachmentPath),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to create scheme');
+      }
+    } catch (e) {
+      throw Exception('Error creating scheme: $e');
+    }
+  }
+
+  // Create a new job profile
+  Future<Map<String, dynamic>> createJob({
+    required String jobTitle,
+    required String companyName,
+    required String jobType,
+    required String location,
+    required String description,
+    String? stateId,
+    String? districtId,
+    String? talukaId,
+    String? villageId,
+    String? salaryMin,
+    String? salaryMax,
+    String? salaryPeriod,
+    String? requirements,
+    String? benefits,
+    String? contactEmail,
+    String? contactPhone,
+    String? expiresAt,
+    String status = 'draft',
+    String? attachmentPath,
+  }) async {
+    final url = Uri.parse('$baseUrl/create-job');
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      var request = http.MultipartRequest('POST', url);
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+
+      request.fields['job_title'] = jobTitle;
+      request.fields['company_name'] = companyName;
+      request.fields['job_type'] = jobType;
+      request.fields['location'] = location;
+      request.fields['description'] = description;
+      request.fields['status'] = status;
+
+      if (stateId != null) request.fields['state_id'] = stateId;
+      if (districtId != null) request.fields['district_id'] = districtId;
+      if (talukaId != null) request.fields['taluka_id'] = talukaId;
+      if (villageId != null) request.fields['village_id'] = villageId;
+
+      if (salaryMin != null) request.fields['salary_min'] = salaryMin;
+      if (salaryMax != null) request.fields['salary_max'] = salaryMax;
+      if (salaryPeriod != null) request.fields['salary_period'] = salaryPeriod;
+
+      if (requirements != null) request.fields['requirements'] = requirements;
+      if (benefits != null) request.fields['benefits'] = benefits;
+
+      if (contactEmail != null) request.fields['contact_email'] = contactEmail;
+      if (contactPhone != null) request.fields['contact_phone'] = contactPhone;
+      if (expiresAt != null) request.fields['expires_at'] = expiresAt;
+
+      if (attachmentPath != null && attachmentPath.isNotEmpty) {
+        request.files.add(
+          await http.MultipartFile.fromPath('attachment', attachmentPath),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to create job');
+      }
+    } catch (e) {
+      throw Exception('Error creating job: $e');
     }
   }
 }

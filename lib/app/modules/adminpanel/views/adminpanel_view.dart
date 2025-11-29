@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/adminpanel_controller.dart';
 import '../../farmerslist/views/farmerslist_view.dart';
+import '../../../utils/ui_utils.dart';
 import '../../farmerslist/controllers/farmerslist_controller.dart';
 import '../../superadminlist/views/superadminlist_view.dart';
 import '../../superadminlist/controllers/superadminlist_controller.dart';
@@ -10,6 +11,7 @@ import '../../../widhets/send_email.dart';
 import '../../../widhets/send_whatsapp_message.dart';
 import '../../../widhets/government_schema.dart';
 import '../../../widhets/crop_claim.dart';
+import '../../../widhets/createJobApplication.dart';
 
 class AdminpanelView extends GetView<AdminpanelController> {
   const AdminpanelView({super.key});
@@ -87,17 +89,20 @@ class AdminpanelView extends GetView<AdminpanelController> {
                   ),
                 ),
                 SizedBox(height: 12),
-                Text(
-                  'Admin Panel',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Obx(
+                  () => Text(
+                    controller.userName.value,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Smart Shetkaरी',
+                  'Smart Shetkaari',
                   style: TextStyle(
                     color: Color.fromARGB(255, 255, 255, 255), // Light Green
                     fontSize: 14,
@@ -157,6 +162,12 @@ class AdminpanelView extends GetView<AdminpanelController> {
                       isSelected: controller.selectedIndex.value == 6,
                     ),
                     _buildNavItem(
+                      icon: Icons.work_outline,
+                      title: 'Create Job',
+                      index: 8,
+                      isSelected: controller.selectedIndex.value == 8,
+                    ),
+                    _buildNavItem(
                       icon: Icons.settings_rounded,
                       title: 'Settings',
                       index: 7,
@@ -183,18 +194,22 @@ class AdminpanelView extends GetView<AdminpanelController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Admin User',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                      Obx(
+                        () => Text(
+                          controller.userName.value,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                      Text(
-                        'admin@kissan.com',
-                        style: TextStyle(color: Colors.white70, fontSize: 11),
-                        overflow: TextOverflow.ellipsis,
+                      Obx(
+                        () => Text(
+                          controller.userEmail.value,
+                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -318,6 +333,13 @@ class AdminpanelView extends GetView<AdminpanelController> {
             'Settings',
             Icons.settings_rounded,
             _buildAdminSettings(context),
+          );
+        case 8:
+          return _buildPageWithHeader(
+            context,
+            'Create Job',
+            Icons.work_outline,
+            const CreateJobApplication(),
           );
         default:
           return _buildDashboard(context);
@@ -594,14 +616,14 @@ class AdminpanelView extends GetView<AdminpanelController> {
                               ),
                             ),
                             SizedBox(height: 16),
-                            _buildStatCard(
-                              title: 'Approved Today',
-                              value: '1',
-                              icon: Icons.check_circle_rounded,
-                              color: Color(0xFF54B5D9),
-                              trend: '+18%',
-                              trendUp: true,
-                            ),
+                            // _buildStatCard(
+                            //   title: 'Approved Today',
+                            //   value: '1',
+                            //   icon: Icons.check_circle_rounded,
+                            //   color: Color(0xFF54B5D9),
+                            //   trend: '+18%',
+                            //   trendUp: true,
+                            // ),
                           ],
                         );
                       } else if (isTablet) {
@@ -1574,14 +1596,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
 
               Get.offAllNamed('/loginsignup');
 
-              Get.snackbar(
-                'Success',
-                'Logged out successfully',
-                backgroundColor: Colors.green,
-                colorText: Colors.white,
-                snackPosition: SnackPosition.BOTTOM,
-                margin: EdgeInsets.all(16),
-              );
+              UiUtils.showSuccessSnackbar('Success', 'Logged out successfully');
             } catch (e) {
               print('Error during logout: $e');
             }

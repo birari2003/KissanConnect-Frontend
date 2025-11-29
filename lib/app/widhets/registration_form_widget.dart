@@ -329,6 +329,10 @@ class _RegistrationFormState extends State<RegistrationForm>
   String? selectedTalukaId;
   String? selectedVillageId;
 
+  // Profile Data
+  Map<String, dynamic>? _farmerProfileData;
+  bool _isLoadingProfile = true;
+
   // Names for submission
   String? selectedStateName;
   String? selectedDistrictName;
@@ -350,6 +354,7 @@ class _RegistrationFormState extends State<RegistrationForm>
     );
     _checkLoginStatus();
     _fetchStates();
+    _fetchFarmerProfile(); // Check if profile exists
     _loadUserData(); // Load user data to auto-populate fields
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
@@ -398,6 +403,31 @@ class _RegistrationFormState extends State<RegistrationForm>
       }
     } catch (e) {
       print('Error fetching states: $e');
+    }
+  }
+
+  Future<void> _fetchFarmerProfile() async {
+    setState(() {
+      _isLoadingProfile = true;
+    });
+    try {
+      final response = await _farmerService.getFarmerProfile();
+      if (response['success'] == true && response['data'] != null) {
+        final data = response['data'];
+        if (data['farmer_profile'] != null) {
+          setState(() {
+            _farmerProfileData = data;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching farmer profile: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+      }
     }
   }
 
@@ -488,7 +518,7 @@ class _RegistrationFormState extends State<RegistrationForm>
   // Translations
   final Map<String, Map<String, dynamic>> translations = {
     'en-US': {
-      'title': 'Farmer Registration',
+      'title': 'Profile Information',
       'personalInfo': 'Personal Information',
       'farmerName': 'Farmer Name',
       'age': 'Age',
@@ -988,6 +1018,8 @@ class _RegistrationFormState extends State<RegistrationForm>
           'Success',
           response['message'] ?? 'Farmer information submitted successfully!',
         );
+        // Fetch profile again to show the submitted data
+        _fetchFarmerProfile();
       }
     } on TimeoutException catch (e) {
       if (mounted) {
@@ -1326,6 +1358,18 @@ class _RegistrationFormState extends State<RegistrationForm>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingProfile) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF2E8B57)),
+        ),
+      );
+    }
+
+    if (_farmerProfileData != null) {
+      return _buildProfileView();
+    }
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -1825,6 +1869,243 @@ class _RegistrationFormState extends State<RegistrationForm>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileView() {
+    final user = _farmerProfileData!['user'];
+    final profile = _farmerProfileData!['farmer_profile'];
+    final state = profile['state'] != null ? profile['state']['name'] : '';
+    final district = profile['district'] != null
+        ? profile['district']['name']
+        : '';
+    final taluka = profile['taluka'] != null ? profile['taluka']['name'] : '';
+    final village = profile['village'] != null
+        ? profile['village']['name']
+        : '';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(getText('title')),
+        backgroundColor: const Color(0xFF2E8B57),
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Status Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: profile['request_status'] == 'approved'
+                    ? Colors.green.shade50
+                    : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: profile['request_status'] == 'approved'
+                      ? Colors.green.shade200
+                      : Colors.orange.shade200,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    profile['request_status'] == 'approved'
+                        ? Icons.check_circle
+                        : Icons.access_time_filled,
+                    size: 48,
+                    color: profile['request_status'] == 'approved'
+                        ? Colors.green
+                        : Colors.orange,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    profile['request_status'] == 'approved'
+                        ? getText('approved')
+                        : getText('pendingApproval'),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: profile['request_status'] == 'approved'
+                          ? Colors.green.shade800
+                          : Colors.orange.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Profile Header
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.green.shade200,
+                        width: 3,
+                      ),
+                      image: profile['passport_photo'] != null
+                          ? DecorationImage(
+                              image: NetworkImage(
+                                'http://192.168.43.43:5000/uploads/${profile['passport_photo']}',
+                              ),
+                              fit: BoxFit.cover,
+                              onError: (exception, stackTrace) {
+                                // Fallback or placeholder
+                              },
+                            )
+                          : null,
+                    ),
+                    child: profile['passport_photo'] == null
+                        ? Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Colors.grey.shade400,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    user['name'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    user['role']?.toString().toUpperCase() ?? '',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            _buildInfoSection(getText('personalInfo'), [
+              _buildInfoRow(getText('contact'), user['phone']),
+              _buildInfoRow(getText('email'), user['email']),
+              _buildInfoRow(getText('age'), profile['age']?.toString()),
+              _buildInfoRow(getText('gender'), profile['gender']),
+              _buildInfoRow(getText('aadharCard'), profile['aadhar_no']),
+              _buildInfoRow(getText('dob'), profile['dob']),
+            ]),
+
+            _buildInfoSection('Location Details', [
+              _buildInfoRow(getText('state'), state),
+              _buildInfoRow(getText('district'), district),
+              _buildInfoRow('Taluka', taluka),
+              _buildInfoRow(getText('village'), village),
+              _buildInfoRow(getText('address'), profile['address']),
+            ]),
+
+            _buildInfoSection(getText('farmInfo'), [
+              _buildInfoRow(
+                getText('landArea'),
+                '${profile['land_area']} Acres',
+              ),
+              _buildInfoRow(getText('soilType'), profile['soil_type']),
+              _buildInfoRow(
+                getText('irrigationSources'),
+                profile['source_of_irrigation'],
+              ),
+            ]),
+
+            _buildInfoSection(getText('farmingDetails'), [
+              _buildInfoRow(getText('cropsGrown'), profile['crops_grown']),
+              _buildInfoRow(
+                getText('cultivationType'),
+                profile['cultivation_type'],
+              ),
+              _buildInfoRow(
+                getText('cropDescription'),
+                profile['crop_description'],
+              ),
+            ]),
+
+            _buildInfoSection(getText('otherInfo'), [
+              _buildInfoRow(getText('occupation'), profile['occupation']),
+              _buildInfoRow(
+                getText('workType'),
+                profile['additional_work_type'],
+              ),
+              _buildInfoRow(getText('cattleBreeder'), profile['crop_owned']),
+              _buildInfoRow(getText('trainingType'), profile['training_type']),
+              _buildInfoRow(getText('feedback'), profile['feedback']),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(String title, List<Widget> children) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade800,
+            ),
+          ),
+          const Divider(height: 24),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String? value) {
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,11 +1,17 @@
+import 'dart:convert';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/farmerServices.dart';
+import '../../../utils/ui_utils.dart';
 
 class SuperadminpanelController extends GetxController {
   final FarmerService _farmerService = FarmerService();
 
   final selectedIndex = 0.obs;
   final isNavigationOpen = false.obs;
+
+  // User Data
+  final userName = 'Super Admin'.obs;
 
   // Messages
   final messages = <dynamic>[].obs;
@@ -14,7 +20,21 @@ class SuperadminpanelController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    loadUserData();
     loadMessages();
+  }
+
+  Future<void> loadUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        userName.value = userData['name'] ?? 'Super Admin';
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
   }
 
   void selectTab(int index) {
@@ -33,11 +53,7 @@ class SuperadminpanelController extends GetxController {
       messages.value = data;
     } catch (e) {
       print('Error loading messages: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load messages: ${e.toString().replaceAll('Exception: ', '')}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      UiUtils.showErrorSnackbar('Error', 'Failed to load dashboard statistics');
     } finally {
       isLoadingMessages.value = false;
     }

@@ -8,13 +8,6 @@ class EmailService {
   EmailService({this.baseUrl = 'http://192.168.43.43:5000/farmer'});
   // EmailService({this.baseUrl = 'https://kissanconnect-backend-z00d.onrender.com/farmer'});
 
-  /// Send email via backend API
-  ///
-  /// Parameters:
-  /// - [subject]: Email subject (required)
-  /// - [message]: Email message body (required)
-  /// - [senderEmail]: Single email or list of emails (required)
-  ///
   /// Returns a Map containing the API response with success status and details
   Future<Map<String, dynamic>> sendEmail({
     required String subject,

@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/ui_utils.dart';
 import '../services/farmerServices.dart';
 import '../services/adminServices.dart';
+import '../services/translation_service.dart';
 
 // Dummy implementations for compilation
 class AuthService {
@@ -44,7 +46,12 @@ class SearchableDropdownModal extends StatefulWidget {
     required this.onChanged,
     required this.getItemId,
     required this.getItemName,
+    this.searchHint = 'Search...',
+    this.noResultsText = 'No results found',
   });
+
+  final String searchHint;
+  final String noResultsText;
 
   @override
   State<SearchableDropdownModal> createState() =>
@@ -134,7 +141,7 @@ class _SearchableDropdownModalState extends State<SearchableDropdownModal> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search...',
+                hintText: widget.searchHint,
                 prefixIcon: Icon(Icons.search, color: Colors.green.shade700),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -183,7 +190,7 @@ class _SearchableDropdownModalState extends State<SearchableDropdownModal> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No results found',
+                          widget.noResultsText,
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey.shade600,
@@ -319,7 +326,41 @@ class _RegistrationFormState extends State<RegistrationForm>
 
   // Location Data
   final AdminService _adminService = AdminService();
+  final TranslationService _translationService = TranslationService();
+
+  Future<String> _translateIfNeed(String text) async {
+    try {
+      String languageCode = 'en';
+      if (widget.selectedLanguage.isNotEmpty) {
+        languageCode = widget.selectedLanguage;
+        // Handle locale codes like 'en_US' -> 'en'
+        if (languageCode.contains('_')) {
+          languageCode = languageCode.split('_')[0];
+        } else if (languageCode.contains('-')) {
+          languageCode = languageCode.split('-')[0];
+        }
+      }
+
+      // Also check context if widget.selectedLanguage is default/empty
+      if ((languageCode == 'en' || languageCode.isEmpty) && mounted) {
+        try {
+          languageCode = LocalizedApp.of(
+            context,
+          ).delegate.currentLocale.languageCode;
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      return await _translationService.translateText(text, languageCode);
+    } catch (e) {
+      print('Error translating: $e');
+      return text;
+    }
+  }
+
   List<dynamic> states = [];
+
   List<dynamic> districts = [];
   List<dynamic> talukas = [];
   List<dynamic> villages = [];
@@ -375,8 +416,15 @@ class _RegistrationFormState extends State<RegistrationForm>
           setState(() {
             // Auto-populate name, email, and phone from user data
             if (userData['name'] != null) {
-              _farmerNameController.text = userData['name'];
+              _translateIfNeed(userData['name']).then((translatedName) {
+                if (mounted) {
+                  setState(() {
+                    _farmerNameController.text = translatedName;
+                  });
+                }
+              });
             }
+
             if (userData['email'] != null &&
                 userData['email'].toString().isNotEmpty) {
               _emailController.text = userData['email'];
@@ -389,7 +437,7 @@ class _RegistrationFormState extends State<RegistrationForm>
       }
     } catch (e) {
       print('Error loading user data: $e');
-      // Continue without auto-populating if there's an error
+      // Continue without auto-populating if there\'s an error
     }
   }
 
@@ -415,6 +463,64 @@ class _RegistrationFormState extends State<RegistrationForm>
       if (response['success'] == true && response['data'] != null) {
         final data = response['data'];
         if (data['farmer_profile'] != null) {
+          // Translate profile data before setting state
+          final profile = data['farmer_profile'];
+          final user = data['user'];
+
+          if (user != null && user['name'] != null) {
+            user['name'] = await _translateIfNeed(user['name']);
+          }
+          if (user != null && user['role'] != null) {
+            user['role'] = await _translateIfNeed(user['role']);
+          }
+
+          if (profile['address'] != null)
+            profile['address'] = await _translateIfNeed(profile['address']);
+          if (profile['soil_type'] != null)
+            profile['soil_type'] = await _translateIfNeed(profile['soil_type']);
+          if (profile['occupation'] != null)
+            profile['occupation'] = await _translateIfNeed(
+              profile['occupation'],
+            );
+          if (profile['additional_work_type'] != null)
+            profile['additional_work_type'] = await _translateIfNeed(
+              profile['additional_work_type'],
+            );
+          if (profile['crop_owned'] != null)
+            profile['crop_owned'] = await _translateIfNeed(
+              profile['crop_owned'],
+            );
+          if (profile['training_type'] != null)
+            profile['training_type'] = await _translateIfNeed(
+              profile['training_type'],
+            );
+          if (profile['feedback'] != null)
+            profile['feedback'] = await _translateIfNeed(profile['feedback']);
+
+          // Translate location names
+          if (profile['village'] != null &&
+              profile['village']['name'] != null) {
+            profile['village']['name'] = await _translateIfNeed(
+              profile['village']['name'],
+            );
+          }
+          if (profile['taluka'] != null && profile['taluka']['name'] != null) {
+            profile['taluka']['name'] = await _translateIfNeed(
+              profile['taluka']['name'],
+            );
+          }
+          if (profile['district'] != null &&
+              profile['district']['name'] != null) {
+            profile['district']['name'] = await _translateIfNeed(
+              profile['district']['name'],
+            );
+          }
+          if (profile['state'] != null && profile['state']['name'] != null) {
+            profile['state']['name'] = await _translateIfNeed(
+              profile['state']['name'],
+            );
+          }
+
           setState(() {
             _farmerProfileData = data;
           });
@@ -515,258 +621,12 @@ class _RegistrationFormState extends State<RegistrationForm>
     });
   }
 
-  // Translations
-  final Map<String, Map<String, dynamic>> translations = {
-    'en-US': {
-      'title': 'Profile Information',
-      'personalInfo': 'Personal Information',
-      'farmerName': 'Farmer Name',
-      'age': 'Age',
-      'gender': 'Gender',
-      'male': 'Male',
-      'female': 'Female',
-      'other': 'Other',
-      'contact': 'Mobile Number',
-      'aadharCard': 'Aadhaar Card Number',
-      'address': 'Address',
-      'city': 'City', // Added
-      'district': 'District', // Added
-      ''
-              'state':
-          'State', // Added
-      'village': 'Village', // Added
-      'email': 'Email (Optional)',
-      'dob': 'Date of Birth',
-      'selectDate': 'Select Date',
-      'passportPhoto': 'Passport Size Photo',
-      'uploadPhoto': 'Upload Photo',
-      'farmInfo': 'Farm Information',
-      'landArea': 'Land Area (in Acres)',
-      'soilType': 'Soil Type',
-      'soilTypes': [
-        'Alluvial',
-        'Black',
-        'Red',
-        'Laterite',
-        'Desert',
-        'Mountain',
-      ],
-      'irrigationSources': 'Sources of Irrigation',
-      'irrigationOptions': [
-        'Well',
-        'Borewell',
-        'Canal',
-        'River',
-        'Pond',
-        'Other',
-      ],
-      'farmingDetails': 'Farming Details',
-      'cropsGrown': 'Crops Grown (Select multiple)',
-      'cultivationType': 'Cultivation Method',
-      'traditional': 'Traditional',
-      'modern': 'Modern',
-      'organic': 'Organic',
-      'cropDescription': 'Description of Crops',
-      'otherInfo': 'Other Information',
-      'occupation': 'Occupation',
-      'familyInfo': 'Family Information',
-      'workType': 'Additional Work Type',
-      'workTypes': ['Extra Work/Job', 'Business/Support Work'],
-      'cattleBreeder': 'Cattle Owned (Select multiple)',
-      'cattleOptions': ['Cow', 'Buffalo', 'Goat', 'Sheep', 'None'],
-      'poultryInfo': 'Poultry Information (e.g., number of chickens)',
-      'trainingProgram': 'Training Programs',
-      'trainingType': 'Select Training Type',
-      'feedback': 'Feedback / Opinion',
-      'submit': 'Submit Registration',
-      'reset': 'Reset Form',
-      'crops': [
-        'Wheat',
-        'Rice',
-        'Corn',
-        'Soybean',
-        'Sugarcane',
-        'Cotton',
-        'Gram',
-        'Sunflower',
-      ],
-      'trainings': [
-        'Modern Farming Techniques',
-        'Organic Farming',
-        'Pest Management',
-        'Soil Health',
-      ],
-      'requiredField': 'This field is required',
-      'invalidContact': 'Please enter a valid 10-digit mobile number',
-      'invalidAadhar': 'Please enter a valid 12-digit Aadhaar number',
-      'invalidEmail': 'Please enter a valid email address',
-      'optional': 'Optional',
-    },
-    'hi-IN': {
-      'title': 'किसान पंजीकरण फॉर्म',
-      'personalInfo': 'व्यक्तिगत जानकारी',
-      'farmerName': 'किसान का नाम',
-      'age': 'उम्र',
-      'gender': 'लिंग',
-      'male': 'पुरुष',
-      'female': 'महिला',
-      'other': 'अन्य',
-      'contact': 'मोबाइल नंबर',
-      'aadharCard': 'आधार कार्ड नंबर',
-      'address': 'पता',
-      'city': 'शहर', // Added
-      'district': 'जिला', // Added
-      'state': 'राज्य', // Added
-      'village': 'गाँव', // Added
-      'email': 'ईमेल (वैकल्पिक)',
-      'dob': 'जन्म तिथि',
-      'selectDate': 'तारीख चुनें',
-      'passportPhoto': 'पासपोर्ट साइज फोटो',
-      'uploadPhoto': 'फोटो अपलोड करें',
-      'farmInfo': 'खेत की जानकारी',
-      'landArea': 'भूमि क्षेत्र (एकड़ में)',
-      'soilType': 'मिट्टी का प्रकार',
-      'soilTypes': ['जलोढ़', 'काली', 'लाल', 'लैटेराइट', 'रेगिस्तानी', 'पहाड़ी'],
-      'irrigationSources': 'सिंचाई के स्रोत',
-      'irrigationOptions': ['कुआं', 'बोरवेल', 'नहर', 'नदी', 'तालाब', 'अन्य'],
-      'farmingDetails': 'खेती का विवरण',
-      'cropsGrown': 'उगाई जाने वाली फसलें (कई चुनें)',
-      'cultivationType': 'खेती की विधि',
-      'traditional': 'पारंपरिक',
-      'modern': 'आधुनिक',
-      'organic': 'जैविक',
-      'cropDescription': 'फसलों का विवरण',
-      'otherInfo': 'अन्य जानकारी',
-      'occupation': 'व्यवसाय',
-      'familyInfo': 'परिवार की जानकारी',
-      'workType': 'अतिरिक्त कार्य प्रकार',
-      'workTypes': ['अतिरिक्त काम/नौकरी', 'व्यवसाय/सहायक कार्य'],
-      'cattleBreeder': 'पालतू पशु (कई चुनें)',
-      'cattleOptions': ['गाय', 'भैंस', 'बकरी', ' भेड़', 'कोई नहीं'],
-      'poultryInfo': 'मुर्गीपालन की जानकारी (जैसे, मुर्गियों की संख्या)',
-      'trainingProgram': 'प्रशिक्षण कार्यक्रम',
-      'trainingType': 'प्रशिक्षण प्रकार चुनें',
-      'feedback': 'प्रतिक्रिया / राय',
-      'submit': 'पंजीकरण जमा करें',
-      'reset': 'फॉर्म रीसेट करें',
-      'crops': [
-        'गेहूं',
-        'चावल',
-        'मक्का',
-        'सोयाबीन',
-        'गन्ना',
-        'कपास',
-        'चना',
-        'सूरजमुखी',
-      ],
-      'pendingApproval': 'Your request is pending approval',
-      'approved': 'Your application has been approved!',
-      'errorLoading': 'Error loading farmer information',
-      'noData': 'No farmer data found',
-      'loading': 'Loading...',
-      'trainings': [
-        'आधुनिक कृषि तकनीक',
-        'जैविक खेती',
-        'कीट प्रबंधन',
-        'मृदा स्वास्थ्य',
-      ],
-      'requiredField': 'यह फ़ील्ड आवश्यक है',
-      'invalidContact': 'कृपया एक वैध 10-अंकीय मोबाइल नंबर दर्ज करें',
-      'invalidAadhar': 'कृपया एक वैध 12-अंकीय आधार संख्या दर्ज करें',
-      'invalidEmail': 'कृपया एक वैध ईमेल पता दर्ज करें',
-      'optional': 'वैकल्पिक',
-    },
-    'mr-IN': {
-      'title': 'शेतकरी नोंदणी फॉर्म',
-      'personalInfo': 'वैयक्तिक माहिती',
-      'farmerName': 'शेतकऱ्याचे नाव',
-      'age': 'वय',
-      'gender': 'लिंग',
-      'male': 'पुरुष',
-      'female': 'महिला',
-      'other': 'इतर',
-      'contact': 'मोबाइल नंबर',
-      'aadharCard': 'आधार कार्ड नंबर',
-      'address': 'पत्ता',
-      'city': 'शहर', // Added
-      'district': 'जिल्हा', // Added
-      'state': 'राज्य', // Added
-      'village': 'गाव', // Added
-      'email': 'ईमेल (पर्यायी)',
-      'dob': 'जन्म तारीख',
-      'selectDate': 'तारीख निवडा',
-      'passportPhoto': 'पासपोर्ट आकाराचा फोटो',
-      'uploadPhoto': 'फोटो अपलोड करा',
-      'farmInfo': 'शेतीची माहिती',
-      'landArea': 'जमीन क्षेत्र (एकर मध्ये)',
-      'soilType': 'मातीचा प्रकार',
-      'soilTypes': ['गाळाची', 'काळी', 'लाल', 'जांभी', 'वाळवंटी', 'पर्वतीय'],
-      'irrigationSources': 'सिंचनाचे स्रोत',
-      'irrigationOptions': ['विहीर', 'बोरवेल', 'कालवा', 'नदी', 'तलाव', 'इतर'],
-      'farmingDetails': 'शेती तपशील',
-      'cropsGrown': 'पिकवलेली पिके (अनेक निवडा)',
-      'cultivationType': 'लागवड पद्धत',
-      'traditional': 'पारंपारिक',
-      'modern': 'आधुनिक',
-      'organic': 'सेंद्रिय',
-      'cropDescription': 'पिकांचे वर्णन',
-      'otherInfo': 'इतर माहिती',
-      'occupation': 'व्यवसाय',
-      'familyInfo': 'कौटुंबिक माहिती',
-      'workType': 'अतिरिक्त कामाचा प्रकार',
-      'workTypes': ['अतिरिक्त काम/नोकरी', 'व्यवसाय/सहाय्यक काम'],
-      'cattleBreeder': 'मालकीची गुरे (अनेक निवडा)',
-      'cattleOptions': ['गाय', 'म्हैस', 'शेळी', 'मेंढी', 'काहीही नाही'],
-      'poultryInfo': 'पोल्ट्री माहिती (उदा. कोंबड्यांची संख्या)',
-      'trainingProgram': 'प्रशिक्षण कार्यक्रम',
-      'trainingType': 'प्रशिक्षण प्रकार निवडा',
-      'feedback': 'अभिप्राय / मत',
-      'submit': 'नोंदणी सादर करा',
-      'reset': 'फॉर्म रीसेट करा',
-      'crops': [
-        'गहू',
-        'तांदूळ',
-        'मका',
-        'सोयाबीन',
-        'ऊस',
-        'कापूस',
-        'हरभरा',
-        'सूर्यफूल',
-      ],
-      'trainings': [
-        'आधुनिक शेती तंत्रज्ञान',
-        'सेंद्रिय शेती',
-        'कीड व्यवस्थापन',
-        'जमिनीचे आरोग्य',
-      ],
-      'requiredField': 'हे फील्ड आवश्यक आहे',
-      'invalidContact': 'कृपया वैध १०-अंकी मोबाइल नंबर प्रविष्ट करा',
-      'invalidAadhar': 'कृपया वैध १२-अंकी आधार क्रमांक प्रविष्ट करा',
-      'invalidEmail': 'कृपया वैध ईमेल पत्ता प्रविष्ट करा',
-      'optional': 'पर्यायी',
-    },
-  };
+  // Translations removed. Using flutter_translate.
 
   // Get the selected language from the parent widget
   String get selectedLanguage => widget.selectedLanguage;
 
-  String getText(String key) {
-    final languageMap = translations[selectedLanguage];
-    if (languageMap == null || !languageMap.containsKey(key)) {
-      // Fallback to English if selected language or key is not found
-      return translations['en-US']?[key] ?? key;
-    }
-    return languageMap[key] ?? key;
-  }
-
-  List<String> getList(String key) {
-    final languageMap = translations[selectedLanguage];
-    if (languageMap == null || !languageMap.containsKey(key)) {
-      // Fallback to English if selected language or key is not found
-      return List<String>.from(translations['en-US']?[key] ?? []);
-    }
-    return List<String>.from(languageMap[key] ?? []);
-  }
+  // getText and getList removed. Using translate() directly.
 
   Future<void> _checkLoginStatus() async {
     final authService = AuthService();
@@ -872,20 +732,24 @@ class _RegistrationFormState extends State<RegistrationForm>
               });
             }
           } catch (e) {
-            _showError('Failed to process image: ${e.toString()}');
+            _showError(
+              translate('failedToProcessImage', args: {'error': e.toString()}),
+            );
           }
         } else {
           rethrow;
         }
       }
     } catch (e) {
-      _showError('Error selecting image: ${e.toString()}');
+      _showError(
+        translate('errorSelectingImage', args: {'error': e.toString()}),
+      );
     }
   }
 
   void _showError(String message) {
     if (mounted) {
-      UiUtils.showErrorSnackbar('Error', message);
+      UiUtils.showErrorSnackbar(translate('error'), message);
     }
   }
 
@@ -915,13 +779,15 @@ class _RegistrationFormState extends State<RegistrationForm>
     // Validate searchable dropdowns
     bool hasDropdownErrors = false;
     setState(() {
-      stateError = selectedStateId == null ? getText('requiredField') : null;
+      stateError = selectedStateId == null ? translate('requiredField') : null;
       districtError = selectedDistrictId == null
-          ? getText('requiredField')
+          ? translate('requiredField')
           : null;
-      talukaError = selectedTalukaId == null ? getText('requiredField') : null;
+      talukaError = selectedTalukaId == null
+          ? translate('requiredField')
+          : null;
       villageError = selectedVillageId == null
-          ? getText('requiredField')
+          ? translate('requiredField')
           : null;
 
       hasDropdownErrors =
@@ -933,8 +799,8 @@ class _RegistrationFormState extends State<RegistrationForm>
 
     if (hasDropdownErrors) {
       UiUtils.showErrorSnackbar(
-        'Error',
-        'Please fill all required location fields',
+        translate('error'),
+        translate('fillAllRequiredLocationFields'),
       );
       return;
     }
@@ -951,7 +817,7 @@ class _RegistrationFormState extends State<RegistrationForm>
       final userDataString = prefs.getString('user_data');
 
       if (token == null || userDataString == null) {
-        throw Exception('User not authenticated. Please log in again.');
+        throw Exception(translate('userNotAuthenticated'));
       }
 
       // Extract user ID from user_data JSON
@@ -959,7 +825,7 @@ class _RegistrationFormState extends State<RegistrationForm>
       final userId = userData['id'];
 
       if (userId == null) {
-        throw Exception('User ID not found. Please log in again.');
+        throw Exception(translate('userIdNotFound'));
       }
 
       // Create the farmer info map
@@ -1005,7 +871,7 @@ class _RegistrationFormState extends State<RegistrationForm>
           }
         } catch (e) {
           print('Error reading image file: $e');
-          // Continue without the photo if there's an error
+          // Continue without the photo if there\'s an error
         }
       }
 
@@ -1015,30 +881,30 @@ class _RegistrationFormState extends State<RegistrationForm>
       if (mounted) {
         _resetForm();
         UiUtils.showSuccessSnackbar(
-          'Success',
-          response['message'] ?? 'Farmer information submitted successfully!',
+          translate('success'),
+          response['message'] ?? translate('farmerInfoSubmittedSuccessfully'),
         );
         // Fetch profile again to show the submitted data
         _fetchFarmerProfile();
       }
     } on TimeoutException catch (e) {
       if (mounted) {
-        UiUtils.showErrorSnackbar('Error', e.toString());
+        UiUtils.showErrorSnackbar(translate('error'), e.toString());
       }
       print('Error submitting form: $e');
     } on SocketException catch (e) {
       if (mounted) {
-        UiUtils.showErrorSnackbar('Error', e.toString());
+        UiUtils.showErrorSnackbar(translate('error'), e.toString());
       }
       print('Error submitting form: $e');
     } on HttpException catch (e) {
       if (mounted) {
-        UiUtils.showErrorSnackbar('Error', e.toString());
+        UiUtils.showErrorSnackbar(translate('error'), e.toString());
       }
       print('Error submitting form: $e');
     } catch (e) {
       if (mounted) {
-        UiUtils.showErrorSnackbar('Error', e.toString());
+        UiUtils.showErrorSnackbar(translate('error'), e.toString());
       }
       print('Error submitting form: $e');
     } finally {
@@ -1140,7 +1006,7 @@ class _RegistrationFormState extends State<RegistrationForm>
             (isRequired
                 ? (value) {
                     if (value == null || value.isEmpty)
-                      return getText('requiredField');
+                      return translate('requiredField');
                     return null;
                   }
                 : null),
@@ -1176,8 +1042,9 @@ class _RegistrationFormState extends State<RegistrationForm>
         value: value,
         onChanged: onChanged,
         validator: isRequired
-            ? (val) =>
-                  (val == null || val.isEmpty) ? getText('requiredField') : null
+            ? (val) => (val == null || val.isEmpty)
+                  ? translate('requiredField')
+                  : null
             : null,
         decoration: InputDecoration(
           labelText: label,
@@ -1351,6 +1218,8 @@ class _RegistrationFormState extends State<RegistrationForm>
           onChanged: onChanged,
           getItemId: getItemId,
           getItemName: getItemName,
+          searchHint: translate('search'),
+          noResultsText: translate('noResults'),
         );
       },
     );
@@ -1389,7 +1258,7 @@ class _RegistrationFormState extends State<RegistrationForm>
                 backgroundColor: const Color(0xFF2E8B57),
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(
-                    getText('title'),
+                    translate('title'),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
@@ -1450,50 +1319,50 @@ class _RegistrationFormState extends State<RegistrationForm>
                         children: [
                           // --- Personal Information ---
                           _buildSectionTitle(
-                            getText('personalInfo'),
+                            translate('personalInfo'),
                             Icons.person,
                             Colors.blue.shade700,
                           ),
                           _buildTextFormField(
-                            getText('farmerName'),
+                            translate('farmerName'),
                             _farmerNameController,
                           ),
                           _buildTextFormField(
-                            getText('age'),
+                            translate('age'),
                             _ageController,
                             keyboardType: TextInputType.number,
                           ),
                           _buildDropdown(
-                            getText('gender'),
+                            translate('gender'),
                             selectedGender,
                             [
-                              getText('male'),
-                              getText('female'),
-                              getText('other'),
+                              translate('male'),
+                              translate('female'),
+                              translate('other'),
                             ],
                             (v) => setState(() => selectedGender = v),
                           ),
                           _buildTextFormField(
-                            getText('contact'),
+                            translate('contact'),
                             _contactController,
                             keyboardType: TextInputType.phone,
                             validator: (v) {
                               if (v == null || v.isEmpty)
-                                return getText('requiredField');
+                                return translate('requiredField');
                               if (v.length != 10)
-                                return getText('invalidContact');
+                                return translate('invalidContact');
                               return null;
                             },
                           ),
                           _buildTextFormField(
-                            getText('aadharCard'),
+                            translate('aadharCard'),
                             _aadharController,
                             keyboardType: TextInputType.number,
                             validator: (v) {
                               if (v == null || v.isEmpty)
-                                return getText('requiredField');
+                                return translate('requiredField');
                               if (v.length != 12)
-                                return getText('invalidAadhar');
+                                return translate('invalidAadhar');
                               return null;
                             },
                           ),
@@ -1501,7 +1370,7 @@ class _RegistrationFormState extends State<RegistrationForm>
                             controller: _dobController,
                             readOnly: true,
                             decoration: InputDecoration(
-                              labelText: getText('dob'),
+                              labelText: translate('dob'),
                               labelStyle: TextStyle(
                                 color: Colors.green.shade800,
                               ),
@@ -1523,13 +1392,13 @@ class _RegistrationFormState extends State<RegistrationForm>
                             ),
                             onTap: () => _selectDate(context),
                             validator: (v) => (v == null || v.isEmpty)
-                                ? getText('requiredField')
+                                ? translate('requiredField')
                                 : null,
                           ),
                           const SizedBox(height: 16),
                           // State Dropdown
                           _buildSearchableDropdown(
-                            label: getText('state'),
+                            label: translate('state'),
                             selectedValue: selectedStateId,
                             selectedDisplayText: selectedStateName,
                             items: states,
@@ -1546,7 +1415,7 @@ class _RegistrationFormState extends State<RegistrationForm>
 
                           // District Dropdown
                           _buildSearchableDropdown(
-                            label: getText('district'),
+                            label: translate('district'),
                             selectedValue: selectedDistrictId,
                             selectedDisplayText: selectedDistrictName,
                             items: districts,
@@ -1563,7 +1432,7 @@ class _RegistrationFormState extends State<RegistrationForm>
 
                           // Taluka Dropdown
                           _buildSearchableDropdown(
-                            label: 'Taluka',
+                            label: translate('taluka'),
                             selectedValue: selectedTalukaId,
                             selectedDisplayText: selectedTalukaName,
                             items: talukas,
@@ -1580,7 +1449,7 @@ class _RegistrationFormState extends State<RegistrationForm>
 
                           // Village Dropdown
                           _buildSearchableDropdown(
-                            label: getText('village'),
+                            label: translate('village'),
                             selectedValue: selectedVillageId,
                             selectedDisplayText: selectedVillageName,
                             items: villages,
@@ -1596,7 +1465,7 @@ class _RegistrationFormState extends State<RegistrationForm>
                           ),
 
                           _buildTextFormField(
-                            getText('email'),
+                            translate('email'),
                             _emailController,
                             isRequired: false,
                             keyboardType: TextInputType.emailAddress,
@@ -1604,7 +1473,7 @@ class _RegistrationFormState extends State<RegistrationForm>
                               if (v != null &&
                                   v.isNotEmpty &&
                                   !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
-                                return getText('invalidEmail');
+                                return translate('invalidEmail');
                               }
                               return null;
                             },
@@ -1614,7 +1483,7 @@ class _RegistrationFormState extends State<RegistrationForm>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${getText('passportPhoto')} (${getText('optional')})',
+                                '${translate('passportPhoto')} (${translate('optional')})',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey.shade700,
@@ -1644,7 +1513,7 @@ class _RegistrationFormState extends State<RegistrationForm>
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                getText('uploadPhoto'),
+                                                translate('uploadPhoto'),
                                                 style: TextStyle(
                                                   color: Colors.grey.shade600,
                                                 ),
@@ -1695,97 +1564,109 @@ class _RegistrationFormState extends State<RegistrationForm>
                           ),
                           // --- Farm Information ---
                           _buildSectionTitle(
-                            getText('farmInfo'),
+                            translate('farmInfo'),
                             Icons.eco,
                             Colors.green.shade800,
                           ),
                           _buildTextFormField(
-                            getText('landArea'),
+                            translate('landArea'),
                             _landAreaController,
                             keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
                           ),
                           _buildDropdown(
-                            getText('soilType'),
+                            translate('soilType'),
                             selectedSoilType,
-                            getList('soilTypes'),
+                            translate(
+                              'soilTypes',
+                            ).split(',').map((e) => e.trim()).toList(),
                             (v) => setState(() => selectedSoilType = v),
                           ),
                           _buildMultiSelect(
-                            getText('irrigationSources'),
-                            getList('irrigationOptions'),
+                            translate('irrigationSources'),
+                            translate(
+                              'irrigationOptions',
+                            ).split(',').map((e) => e.trim()).toList(),
                             selectedIrrigationSources,
                           ),
                           // --- Farming Details ---
                           _buildSectionTitle(
-                            getText('farmingDetails'),
+                            translate('farmingDetails'),
                             Icons.agriculture,
                             Colors.orange.shade800,
                           ),
                           _buildMultiSelect(
-                            getText('cropsGrown'),
-                            getList('crops'),
+                            translate('cropsGrown'),
+                            translate(
+                              'crops',
+                            ).split(',').map((e) => e.trim()).toList(),
                             selectedCrops,
                           ),
                           _buildDropdown(
-                            getText('cultivationType'),
+                            translate('cultivationType'),
                             selectedCultivationType,
                             [
-                              getText('traditional'),
-                              getText('modern'),
-                              getText('organic'),
+                              translate('traditional'),
+                              translate('modern'),
+                              translate('organic'),
                             ],
                             (v) => setState(() => selectedCultivationType = v),
                           ),
                           _buildTextFormField(
-                            getText('cropDescription'),
+                            translate('cropDescription'),
                             _cropDescriptionController,
                             isRequired: false,
                             maxLines: 3,
                           ),
                           // --- Other Information ---
                           _buildSectionTitle(
-                            getText('otherInfo'),
+                            translate('otherInfo'),
                             Icons.info,
                             Colors.purple.shade700,
                           ),
                           _buildTextFormField(
-                            getText('occupation'),
+                            translate('occupation'),
                             _occupationController,
                           ),
                           _buildTextFormField(
-                            getText('familyInfo'),
+                            translate('familyInfo'),
                             _familyInfoController,
                             isRequired: false,
                             maxLines: 2,
                           ),
                           _buildDropdown(
-                            getText('workType'),
+                            translate('workType'),
                             selectedWorkType,
-                            getList('workTypes'),
+                            translate(
+                              'workTypes',
+                            ).split(',').map((e) => e.trim()).toList(),
                             (v) => setState(() => selectedWorkType = v),
                             isRequired: false,
                           ),
                           _buildMultiSelect(
-                            getText('cattleBreeder'),
-                            getList('cattleOptions'),
+                            translate('cattleBreeder'),
+                            translate(
+                              'cattleOptions',
+                            ).split(',').map((e) => e.trim()).toList(),
                             selectedCattle,
                           ),
                           _buildTextFormField(
-                            getText('poultryInfo'),
+                            translate('poultryInfo'),
                             _poultryInfoController,
                             isRequired: false,
                           ),
                           _buildDropdown(
-                            getText('trainingType'),
+                            translate('trainingType'),
                             selectedTrainingType,
-                            getList('trainings'),
+                            translate(
+                              'trainings',
+                            ).split(',').map((e) => e.trim()).toList(),
                             (v) => setState(() => selectedTrainingType = v),
                             isRequired: false,
                           ),
                           _buildTextFormField(
-                            getText('feedback'),
+                            translate('feedback'),
                             _feedbackController,
                             isRequired: false,
                             maxLines: 4,
@@ -1809,7 +1690,7 @@ class _RegistrationFormState extends State<RegistrationForm>
                                     ),
                                   ),
                                   child: Text(
-                                    getText('reset'),
+                                    translate('reset'),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -1839,7 +1720,7 @@ class _RegistrationFormState extends State<RegistrationForm>
                                           color: Colors.white,
                                         ),
                                   label: Text(
-                                    getText('submit'),
+                                    translate('submit'),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -1887,7 +1768,7 @@ class _RegistrationFormState extends State<RegistrationForm>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(getText('title')),
+        title: Text(translate('title')),
         backgroundColor: const Color(0xFF2E8B57),
         foregroundColor: Colors.white,
       ),
@@ -1926,8 +1807,8 @@ class _RegistrationFormState extends State<RegistrationForm>
                   const SizedBox(height: 12),
                   Text(
                     profile['request_status'] == 'approved'
-                        ? getText('approved')
-                        : getText('pendingApproval'),
+                        ? translate('application_approved_message')
+                        : translate('pendingApproval'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1994,56 +1875,47 @@ class _RegistrationFormState extends State<RegistrationForm>
             ),
             const SizedBox(height: 32),
 
-            _buildInfoSection(getText('personalInfo'), [
-              _buildInfoRow(getText('contact'), user['phone']),
-              _buildInfoRow(getText('email'), user['email']),
-              _buildInfoRow(getText('age'), profile['age']?.toString()),
-              _buildInfoRow(getText('gender'), profile['gender']),
-              _buildInfoRow(getText('aadharCard'), profile['aadhar_no']),
-              _buildInfoRow(getText('dob'), profile['dob']),
+            _buildInfoSection(translate('personalInfo'), [
+              _buildInfoRow(translate('contact'), user['phone']),
+              _buildInfoRow(translate('email'), user['email']),
+              _buildInfoRow(translate('age'), profile['age']?.toString()),
+              _buildInfoRow(translate('gender'), profile['gender']),
+              _buildInfoRow(translate('aadharCard'), profile['aadhar_no']),
+              _buildInfoRow(translate('dob'), profile['dob']),
             ]),
 
-            _buildInfoSection('Location Details', [
-              _buildInfoRow(getText('state'), state),
-              _buildInfoRow(getText('district'), district),
-              _buildInfoRow('Taluka', taluka),
-              _buildInfoRow(getText('village'), village),
-              _buildInfoRow(getText('address'), profile['address']),
+            _buildInfoSection(translate('locationDetails'), [
+              _buildInfoRow(translate('state'), state),
+              _buildInfoRow(translate('district'), district),
+              _buildInfoRow(translate('taluka'), taluka),
+              _buildInfoRow(translate('village'), village),
+              _buildInfoRow(translate('address'), profile['address']),
             ]),
 
-            _buildInfoSection(getText('farmInfo'), [
+            _buildInfoSection(translate('farmInfo'), [
               _buildInfoRow(
-                getText('landArea'),
-                '${profile['land_area']} Acres',
+                translate('landArea'),
+                '${profile['land_area']} ${translate('acres')}',
               ),
-              _buildInfoRow(getText('soilType'), profile['soil_type']),
+              _buildInfoRow(translate('soilType'), profile['soil_type']),
               _buildInfoRow(
-                getText('irrigationSources'),
+                translate('irrigationSources'),
                 profile['source_of_irrigation'],
               ),
             ]),
 
-            _buildInfoSection(getText('farmingDetails'), [
-              _buildInfoRow(getText('cropsGrown'), profile['crops_grown']),
+            _buildInfoSection(translate('otherInfo'), [
+              _buildInfoRow(translate('occupation'), profile['occupation']),
               _buildInfoRow(
-                getText('cultivationType'),
-                profile['cultivation_type'],
-              ),
-              _buildInfoRow(
-                getText('cropDescription'),
-                profile['crop_description'],
-              ),
-            ]),
-
-            _buildInfoSection(getText('otherInfo'), [
-              _buildInfoRow(getText('occupation'), profile['occupation']),
-              _buildInfoRow(
-                getText('workType'),
+                translate('workType'),
                 profile['additional_work_type'],
               ),
-              _buildInfoRow(getText('cattleBreeder'), profile['crop_owned']),
-              _buildInfoRow(getText('trainingType'), profile['training_type']),
-              _buildInfoRow(getText('feedback'), profile['feedback']),
+              _buildInfoRow(translate('cattleBreeder'), profile['crop_owned']),
+              _buildInfoRow(
+                translate('trainingType'),
+                profile['training_type'],
+              ),
+              _buildInfoRow(translate('feedback'), profile['feedback']),
             ]),
           ],
         ),

@@ -12,6 +12,7 @@ import '../../../widhets/send_whatsapp_message.dart';
 import '../../../widhets/government_schema.dart';
 import '../../../widhets/crop_claim.dart';
 import '../../../widhets/createJobApplication.dart';
+import '../../../widhets/global_chatbot_widget.dart';
 
 class AdminpanelView extends GetView<AdminpanelController> {
   const AdminpanelView({super.key});
@@ -19,31 +20,33 @@ class AdminpanelView extends GetView<AdminpanelController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Main Content Area (always full width)
-          _buildContent(context),
-          // Overlay when navigation is open
-          Obx(
-            () => controller.isNavigationOpen.value
-                ? GestureDetector(
-                    onTap: () => controller.toggleNavigation(),
-                    child: Container(color: Colors.black.withOpacity(0.5)),
-                  )
-                : SizedBox.shrink(),
-          ),
-          // Side Navigation
-          Obx(
-            () => AnimatedPositioned(
-              duration: Duration(milliseconds: 300),
-              left: controller.isNavigationOpen.value ? 0 : -250,
-              top: 0,
-              bottom: 0,
-              width: 250,
-              child: _buildSideNavigation(context),
+      body: GlobalChatbotWidget(
+        child: Stack(
+          children: [
+            // Main Content Area (always full width)
+            _buildContent(context),
+            // Overlay when navigation is open
+            Obx(
+              () => controller.isNavigationOpen.value
+                  ? GestureDetector(
+                      onTap: () => controller.toggleNavigation(),
+                      child: Container(color: Colors.black.withOpacity(0.5)),
+                    )
+                  : SizedBox.shrink(),
             ),
-          ),
-        ],
+            // Side Navigation
+            Obx(
+              () => AnimatedPositioned(
+                duration: Duration(milliseconds: 300),
+                left: controller.isNavigationOpen.value ? 0 : -250,
+                top: 0,
+                bottom: 0,
+                width: 250,
+                child: _buildSideNavigation(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

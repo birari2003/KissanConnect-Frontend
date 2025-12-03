@@ -56,6 +56,7 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'phone': phone, 'password': password}),
       );
+      print(response.body);
 
       final data = jsonDecode(response.body);
 

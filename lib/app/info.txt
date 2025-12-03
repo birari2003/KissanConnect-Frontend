@@ -28,3 +28,8 @@ create a log table,
 for email sending and other features as exceptions we need to store in table
 
 after 1 month user should see the subscription pop up
+
+
+
+job post list
+start date and end date 

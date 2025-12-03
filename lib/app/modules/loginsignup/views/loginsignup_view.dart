@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/loginsignup_controller.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 
 class LoginsignupView extends GetView<LoginsignupController> {
   const LoginsignupView({super.key});
@@ -72,8 +73,8 @@ class LoginsignupView extends GetView<LoginsignupController> {
         const SizedBox(height: 16),
 
         // App Name
-        const Text(
-          'Smart Shetkari',
+        Text(
+          translate('app_title'),
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -85,7 +86,9 @@ class LoginsignupView extends GetView<LoginsignupController> {
 
         Obx(
           () => Text(
-            controller.isLogin.value ? 'Welcome Back!' : 'Create Your Account',
+            controller.isLogin.value
+                ? translate('welcome_back')
+                : translate('create_account'),
             style: TextStyle(
               fontSize: 16,
               color: const Color(0xFF2E8B57).withOpacity(0.8),
@@ -132,8 +135,8 @@ class LoginsignupView extends GetView<LoginsignupController> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Title
-            const Text(
-              'Login',
+            Text(
+              translate('login_title'),
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -142,7 +145,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Sign in to continue',
+              translate('signin_continue'),
               style: TextStyle(
                 fontSize: 14,
                 color: const Color(0xFF2D323A).withOpacity(0.6),
@@ -153,16 +156,16 @@ class LoginsignupView extends GetView<LoginsignupController> {
             // Phone Field
             _buildTextField(
               controller: controller.loginPhoneController,
-              label: 'Phone Number',
-              hint: 'Enter your phone number',
+              label: translate('phone_label'),
+              hint: translate('phone_hint'),
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter your phone number';
+                  return translate('phone_empty_error');
                 }
                 if (value.length != 10) {
-                  return 'Phone number must be 10 digits';
+                  return translate('phone_length_error');
                 }
                 return null;
               },
@@ -173,8 +176,8 @@ class LoginsignupView extends GetView<LoginsignupController> {
             Obx(
               () => _buildTextField(
                 controller: controller.loginPasswordController,
-                label: 'Password',
-                hint: 'Enter your password',
+                label: translate('password_label'),
+                hint: translate('password_hint'),
                 icon: Icons.lock_outline,
                 obscureText: !controller.isLoginPasswordVisible.value,
                 suffixIcon: IconButton(
@@ -188,10 +191,10 @@ class LoginsignupView extends GetView<LoginsignupController> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
+                    return translate('password_empty_error');
                   }
                   if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
+                    return translate('password_length_error');
                   }
                   return null;
                 },
@@ -222,7 +225,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
             // Login Button
             Obx(
               () => _buildActionButton(
-                text: 'Login',
+                text: translate('login_button'),
                 isLoading: controller.isLoading.value,
                 onPressed: controller.login,
               ),
@@ -243,8 +246,8 @@ class LoginsignupView extends GetView<LoginsignupController> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Title
-            const Text(
-              'Sign Up',
+            Text(
+              translate('signup_title'),
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -253,7 +256,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Create your account to get started',
+              translate('signup_subtitle'),
               style: TextStyle(
                 fontSize: 14,
                 color: const Color(0xFF2D323A).withOpacity(0.6),
@@ -264,12 +267,12 @@ class LoginsignupView extends GetView<LoginsignupController> {
             // Name Field
             _buildTextField(
               controller: controller.signupNameController,
-              label: 'Full Name',
-              hint: 'Enter your full name',
+              label: translate('fullname_label'),
+              hint: translate('fullname_hint'),
               icon: Icons.person_outline,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter your name';
+                  return translate('name_empty_error');
                 }
                 return null;
               },
@@ -279,16 +282,16 @@ class LoginsignupView extends GetView<LoginsignupController> {
             // Phone Field
             _buildTextField(
               controller: controller.signupPhoneController,
-              label: 'Phone Number',
-              hint: 'Enter your phone number',
+              label: translate('phone_label'),
+              hint: translate('phone_hint'),
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter your phone number';
+                  return translate('phone_empty_error');
                 }
                 if (value.length != 10) {
-                  return 'Phone number must be 10 digits';
+                  return translate('phone_length_error');
                 }
                 return null;
               },
@@ -298,16 +301,16 @@ class LoginsignupView extends GetView<LoginsignupController> {
             // Email Field
             _buildTextField(
               controller: controller.signupEmailController,
-              label: 'Email',
-              hint: 'Enter your email',
+              label: translate('email_label'),
+              hint: translate('email_hint'),
               icon: Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter your email';
+                  return translate('email_empty_error');
                 }
                 if (!GetUtils.isEmail(value)) {
-                  return 'Please enter a valid email';
+                  return translate('email_invalid_error');
                 }
                 return null;
               },
@@ -318,8 +321,8 @@ class LoginsignupView extends GetView<LoginsignupController> {
             Obx(
               () => _buildTextField(
                 controller: controller.signupPasswordController,
-                label: 'Password',
-                hint: 'Create a password',
+                label: translate('password_label'),
+                hint: translate('create_password_hint'),
                 icon: Icons.lock_outline,
                 obscureText: !controller.isSignupPasswordVisible.value,
                 suffixIcon: IconButton(
@@ -333,10 +336,10 @@ class LoginsignupView extends GetView<LoginsignupController> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter a password';
+                    return translate('create_password_empty_error');
                   }
                   if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
+                    return translate('password_length_error');
                   }
                   return null;
                 },
@@ -345,13 +348,13 @@ class LoginsignupView extends GetView<LoginsignupController> {
             const SizedBox(height: 20),
 
             // Role Selection
-            _buildRoleSelector(),
-            const SizedBox(height: 32),
+            // _buildRoleSelector(),
+            // const SizedBox(height: 32),
 
             // Signup Button
             Obx(
               () => _buildActionButton(
-                text: 'Sign Up',
+                text: translate('signup_button'),
                 isLoading: controller.isLoading.value,
                 onPressed: controller.signup,
               ),
@@ -421,8 +424,8 @@ class LoginsignupView extends GetView<LoginsignupController> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Select Your Role',
+        Text(
+          translate('select_role'),
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -436,6 +439,16 @@ class LoginsignupView extends GetView<LoginsignupController> {
             runSpacing: 12,
             children: controller.roles.map((role) {
               final isSelected = controller.selectedRole.value == role;
+
+              // Map role to translation key
+              String roleText = role;
+              if (role == 'Farmer')
+                roleText = translate('role_farmer');
+              else if (role == 'Super Admin')
+                roleText = translate('role_super_admin');
+              else if (role == 'Admin')
+                roleText = translate('role_admin');
+
               return InkWell(
                 onTap: () => controller.setRole(role),
                 borderRadius: BorderRadius.circular(12),
@@ -457,7 +470,7 @@ class LoginsignupView extends GetView<LoginsignupController> {
                     ),
                   ),
                   child: Text(
-                    role,
+                    roleText,
                     style: TextStyle(
                       color: isSelected
                           ? Colors.white
@@ -533,8 +546,8 @@ class LoginsignupView extends GetView<LoginsignupController> {
         children: [
           Text(
             controller.isLogin.value
-                ? "Don't have an account? "
-                : "Already have an account? ",
+                ? translate('no_account')
+                : translate('has_account'),
             style: TextStyle(
               color: const Color(0xFF2D323A).withOpacity(0.7),
               fontSize: 15,
@@ -546,7 +559,9 @@ class LoginsignupView extends GetView<LoginsignupController> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
             ),
             child: Text(
-              controller.isLogin.value ? 'Sign Up' : 'Login',
+              controller.isLogin.value
+                  ? translate('signup_button')
+                  : translate('login_button'),
               style: const TextStyle(
                 color: Color(0xFF2E8B57),
                 fontSize: 15,

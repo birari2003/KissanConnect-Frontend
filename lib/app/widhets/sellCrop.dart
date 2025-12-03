@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../utils/ui_utils.dart';
 import '../services/farmerServices.dart';
+import '../services/translation_service.dart';
 
 class SellCropController extends GetxController {
   final cropNameController = TextEditingController();
@@ -14,10 +16,45 @@ class SellCropController extends GetxController {
   final selectedUnit = 'Quintal'.obs;
   final units = ['Quintal', 'Kg', 'Ton', 'Bag'];
 
+  String _getTranslatedUnit(String unit) {
+    switch (unit.toLowerCase()) {
+      case 'quintal':
+        return translate('quintal');
+      case 'kg':
+        return translate('kg');
+      case 'ton':
+        return translate('ton');
+      case 'bag':
+        return translate('bag');
+      default:
+        return unit;
+    }
+  }
+
   final selectedImages = <CropImage>[].obs;
   final isSending = false.obs;
   final myCrops = <dynamic>[].obs;
   final isLoadingCrops = false.obs;
+  final TranslationService _translationService = TranslationService();
+
+  Future<String> _translateIfNeed(String text) async {
+    try {
+      String languageCode = 'en';
+      if (Get.context != null) {
+        try {
+          languageCode = LocalizedApp.of(
+            Get.context!,
+          ).delegate.currentLocale.languageCode;
+        } catch (e) {
+          // Fallback or ignore
+        }
+      }
+      return await _translationService.translateText(text, languageCode);
+    } catch (e) {
+      print('Error translating: $e');
+      return text;
+    }
+  }
 
   @override
   void onInit() {
@@ -76,24 +113,33 @@ class SellCropController extends GetxController {
     final price = priceController.text.trim();
 
     if (cropName.isEmpty) {
-      UiUtils.showErrorSnackbar('Error', 'Please enter crop name');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('enter_crop_name_error'),
+      );
       return;
     }
 
     if (quantity.isEmpty) {
-      UiUtils.showErrorSnackbar('Error', 'Please enter quantity');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('enter_quantity_error'),
+      );
       return;
     }
 
     if (price.isEmpty) {
-      UiUtils.showErrorSnackbar('Error', 'Please enter price');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('enter_price_error'),
+      );
       return;
     }
 
     if (selectedImages.isEmpty) {
       UiUtils.showErrorSnackbar(
-        'Error',
-        'Please add at least one image of your crop',
+        translate('error_title'),
+        translate('add_photo_error'),
       );
       return;
     }
@@ -112,8 +158,8 @@ class SellCropController extends GetxController {
       );
 
       UiUtils.showSuccessSnackbar(
-        'Success',
-        'Crop listing created successfully!',
+        translate('success_title'),
+        translate('listing_created_success'),
       );
 
       // Clear form
@@ -126,7 +172,10 @@ class SellCropController extends GetxController {
       // Refresh crops list
       fetchCrops();
     } catch (e) {
-      UiUtils.showErrorSnackbar('Error', 'Failed to create listing: $e');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('listing_creation_failed', args: {'error': e.toString()}),
+      );
     } finally {
       isSending.value = false;
     }
@@ -136,6 +185,19 @@ class SellCropController extends GetxController {
     isLoadingCrops.value = true;
     try {
       final crops = await FarmerService().getCrops();
+
+      for (var crop in crops) {
+        if (crop['crop_name'] != null) {
+          crop['crop_name'] = await _translateIfNeed(crop['crop_name']);
+        }
+        // Translate seller name
+        if (crop['seller'] != null && crop['seller']['name'] != null) {
+          crop['seller']['name'] = await _translateIfNeed(
+            crop['seller']['name'],
+          );
+        }
+      }
+
       myCrops.assignAll(crops);
     } catch (e) {
       print('Error fetching crops: $e');
@@ -205,7 +267,7 @@ class SellCropWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Sell Your Crop',
+                          translate('sell_crop_title'),
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -214,7 +276,7 @@ class SellCropWidget extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'List your crop for sale with photos and pricing',
+                          translate('sell_crop_subtitle'),
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 14,
@@ -238,7 +300,7 @@ class SellCropWidget extends StatelessWidget {
                       Icon(Icons.grass, color: Color(0xFF2E8B57), size: 20),
                       SizedBox(width: 8),
                       Text(
-                        'Crop Name',
+                        translate('crop_name_label'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -251,7 +313,7 @@ class SellCropWidget extends StatelessWidget {
                   TextField(
                     controller: controller.cropNameController,
                     decoration: InputDecoration(
-                      hintText: 'e.g., Wheat, Rice, Cotton, Sugarcane',
+                      hintText: translate('crop_name_hint'),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Colors.grey[300]!),
@@ -286,7 +348,7 @@ class SellCropWidget extends StatelessWidget {
                       Icon(Icons.scale, color: Color(0xFF2E8B57), size: 20),
                       SizedBox(width: 8),
                       Text(
-                        'Quantity',
+                        translate('quantity_label'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -311,7 +373,7 @@ class SellCropWidget extends StatelessWidget {
                             ),
                           ],
                           decoration: InputDecoration(
-                            hintText: 'Enter quantity',
+                            hintText: translate('quantity_hint'),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(color: Colors.grey[300]!),
@@ -350,7 +412,9 @@ class SellCropWidget extends StatelessWidget {
                                 items: controller.units.map((String unit) {
                                   return DropdownMenuItem<String>(
                                     value: unit,
-                                    child: Text(unit),
+                                    child: Text(
+                                      controller._getTranslatedUnit(unit),
+                                    ),
                                   );
                                 }).toList(),
                                 onChanged: (String? newValue) {
@@ -384,7 +448,7 @@ class SellCropWidget extends StatelessWidget {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'Price',
+                        translate('price_label'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -405,12 +469,12 @@ class SellCropWidget extends StatelessWidget {
                       ),
                     ],
                     decoration: InputDecoration(
-                      hintText: 'Enter price per unit',
+                      hintText: translate('price_hint'),
                       prefixIcon: Icon(
                         Icons.currency_rupee,
                         color: Color(0xFF2E8B57),
                       ),
-                      suffixText: 'per unit',
+                      suffixText: translate('price_suffix'),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Colors.grey[300]!),
@@ -449,7 +513,7 @@ class SellCropWidget extends StatelessWidget {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'Crop Photos',
+                        translate('crop_photos_label'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -465,7 +529,7 @@ class SellCropWidget extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: controller.pickImageFromCamera,
                           icon: Icon(Icons.camera_alt, size: 20),
-                          label: Text('Camera'),
+                          label: Text(translate('camera_label')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Color(0xFF2E8B57),
                             side: BorderSide(color: Color(0xFF2E8B57)),
@@ -481,7 +545,7 @@ class SellCropWidget extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: controller.pickImageFromGallery,
                           icon: Icon(Icons.photo_library, size: 20),
-                          label: Text('Gallery'),
+                          label: Text(translate('gallery_label')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Color(0xFF5CC96F),
                             side: BorderSide(color: Color(0xFF5CC96F)),
@@ -517,7 +581,7 @@ class SellCropWidget extends StatelessWidget {
                               ),
                               SizedBox(height: 8),
                               Text(
-                                'No photos added',
+                                translate('no_photos_added'),
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
@@ -525,7 +589,7 @@ class SellCropWidget extends StatelessWidget {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                'Add photos of your crop to attract buyers',
+                                translate('add_photos_hint'),
                                 style: TextStyle(
                                   color: Colors.grey[500],
                                   fontSize: 12,
@@ -577,8 +641,8 @@ class SellCropWidget extends StatelessWidget {
                       : Icon(Icons.send, size: 20),
                   label: Text(
                     controller.isSending.value
-                        ? 'Creating Listing...'
-                        : 'Create Listing',
+                        ? translate('creating_listing')
+                        : translate('create_listing'),
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -598,7 +662,7 @@ class SellCropWidget extends StatelessWidget {
 
             // My Crops Section
             Text(
-              'My Listings',
+              translate('my_listings'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -620,7 +684,7 @@ class SellCropWidget extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Total Uploaded Crops',
+                          translate('total_uploaded_crops'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -650,7 +714,7 @@ class SellCropWidget extends StatelessWidget {
                     if (controller.myCrops.isNotEmpty) ...[
                       Divider(height: 24),
                       Text(
-                        'Recent Uploads:',
+                        translate('recent_uploads'),
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -703,7 +767,7 @@ class SellCropWidget extends StatelessWidget {
                                           children: [
                                             Text(
                                               crop['crop_name'] ??
-                                                  'Unknown Crop',
+                                                  translate('unknown_crop'),
                                               style: TextStyle(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.w600,
@@ -712,7 +776,7 @@ class SellCropWidget extends StatelessWidget {
                                             ),
                                             SizedBox(height: 2),
                                             Text(
-                                              '${crop['quantity']} ${crop['unit']}',
+                                              '${crop['quantity']} ${controller._getTranslatedUnit(crop['unit'] ?? '')}',
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: Colors.grey[600],
@@ -740,7 +804,7 @@ class SellCropWidget extends StatelessWidget {
                                         child: Row(
                                           children: [
                                             Text(
-                                              'View',
+                                              translate('view_label'),
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: Color(0xFF2E8B57),
@@ -767,7 +831,13 @@ class SellCropWidget extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
-                            '+ ${controller.myCrops.length - 5} more...',
+                            translate(
+                              'more_items',
+                              args: {
+                                'count': (controller.myCrops.length - 5)
+                                    .toString(),
+                              },
+                            ),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[500],
@@ -861,13 +931,17 @@ class CropDetailView extends StatelessWidget {
     // Assuming images are served from root/uploads or similar.
     // Adjust base URL as needed. Using the same host as FarmerService but root.
     final String imageBaseUrl = 'http://192.168.43.43:5000';
+    final SellCropController controller = Get.find<SellCropController>();
 
     return Scaffold(
       backgroundColor: Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Color(0xFF2E8B57),
         elevation: 0,
-        title: Text('Crop Details', style: TextStyle(color: Colors.white)),
+        title: Text(
+          translate('crop_details_title'),
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Get.back(),
@@ -936,7 +1010,7 @@ class CropDetailView extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          crop['crop_name'] ?? 'Unknown Crop',
+                          crop['crop_name'] ?? translate('unknown_crop'),
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -954,9 +1028,9 @@ class CropDetailView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '₹${crop['price_per_unit']}/${crop['unit']}',
+                          '₹${crop['price_per_unit']} ${translate('per')} ${controller._getTranslatedUnit(crop['unit'] ?? '')}',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF2E8B57),
                           ),
@@ -966,7 +1040,7 @@ class CropDetailView extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Quantity: ${crop['quantity']} ${crop['unit']}',
+                    '${translate('quantity_label')}: ${crop['quantity']} ${controller._getTranslatedUnit(crop['unit'] ?? '')}',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.black87,
@@ -976,7 +1050,7 @@ class CropDetailView extends StatelessWidget {
                   SizedBox(height: 24),
 
                   Text(
-                    'Seller Information',
+                    translate('seller_info_title'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1001,19 +1075,19 @@ class CropDetailView extends StatelessWidget {
                       children: [
                         _buildInfoRow(
                           Icons.person,
-                          'Name',
+                          translate('name_label'),
                           crop['seller']?['name'] ?? 'N/A',
                         ),
                         Divider(),
                         _buildInfoRow(
                           Icons.phone,
-                          'Phone',
+                          translate('phone_label'),
                           crop['seller']?['phone'] ?? 'N/A',
                         ),
                         Divider(),
                         _buildInfoRow(
                           Icons.email,
-                          'Email',
+                          translate('email_label'),
                           crop['seller']?['email'] ?? 'N/A',
                         ),
                       ],

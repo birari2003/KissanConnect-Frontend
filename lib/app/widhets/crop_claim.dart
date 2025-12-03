@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../utils/ui_utils.dart';
+
 import '../services/farmerServices.dart';
+import '../services/translation_service.dart';
 
 class CropClaimController extends GetxController {
   final cropNameController = TextEditingController();
@@ -13,6 +16,26 @@ class CropClaimController extends GetxController {
   final isSending = false.obs;
   final myClaims = <dynamic>[].obs;
   final isLoadingClaims = false.obs;
+  final TranslationService _translationService = TranslationService();
+
+  Future<String> _translateIfNeed(String text) async {
+    try {
+      String languageCode = 'en';
+      if (Get.context != null) {
+        try {
+          languageCode = LocalizedApp.of(
+            Get.context!,
+          ).delegate.currentLocale.languageCode;
+        } catch (e) {
+          // Fallback or ignore
+        }
+      }
+      return await _translationService.translateText(text, languageCode);
+    } catch (e) {
+      print('Error translating: $e');
+      return text;
+    }
+  }
 
   @override
   void onInit() {
@@ -68,19 +91,25 @@ class CropClaimController extends GetxController {
     final message = messageController.text.trim();
 
     if (cropName.isEmpty) {
-      UiUtils.showErrorSnackbar('Error', 'Please enter crop name');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('enter_crop_name_error'),
+      );
       return;
     }
 
     if (message.isEmpty) {
-      UiUtils.showErrorSnackbar('Error', 'Please enter claim details');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('enter_claim_details_error'),
+      );
       return;
     }
 
     if (attachedFiles.isEmpty) {
       UiUtils.showErrorSnackbar(
-        'Error',
-        'Please attach at least one image or video',
+        translate('error_title'),
+        translate('attach_evidence_error'),
       );
       return;
     }
@@ -96,19 +125,22 @@ class CropClaimController extends GetxController {
       await FarmerService().addCropClaim(cropName, message, evidencePath);
 
       UiUtils.showSuccessSnackbar(
-        'Success',
-        'Crop claim submitted successfully',
+        translate('success_title'),
+        translate('claim_submitted_success'),
       );
 
       // Clear form
       cropNameController.clear();
       messageController.clear();
       attachedFiles.clear();
-      
+
       // Refresh claims list
       fetchClaims();
     } catch (e) {
-      UiUtils.showErrorSnackbar('Error', 'Failed to submit claim: $e');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('claim_submission_failed', args: {'error': e.toString()}),
+      );
     } finally {
       isSending.value = false;
     }
@@ -118,6 +150,32 @@ class CropClaimController extends GetxController {
     isLoadingClaims.value = true;
     try {
       final claims = await FarmerService().getClaims();
+
+      // Translate claims data
+      for (var claim in claims) {
+        if (claim['crop_name'] != null) {
+          claim['crop_name'] = await _translateIfNeed(claim['crop_name']);
+        }
+        if (claim['claim_details'] != null) {
+          claim['claim_details'] = await _translateIfNeed(
+            claim['claim_details'],
+          );
+        }
+        // Translate status if it matches known static keys, otherwise dynamic translation
+        if (claim['status'] != null) {
+          String status = claim['status'].toString().toLowerCase();
+          if (status == 'pending') {
+            claim['status'] = translate('pending_status');
+          } else if (status == 'approved') {
+            claim['status'] = translate('approved');
+          } else if (status == 'rejected') {
+            claim['status'] = translate('rejected');
+          } else {
+            claim['status'] = await _translateIfNeed(claim['status']);
+          }
+        }
+      }
+
       myClaims.assignAll(claims);
     } catch (e) {
       print('Error fetching claims: $e');
@@ -195,7 +253,7 @@ class CropClaimWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Crop Claim',
+                          translate('crop_claim_title'),
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -204,7 +262,7 @@ class CropClaimWidget extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Submit your crop damage or insurance claim',
+                          translate('crop_claim_subtitle'),
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 14,
@@ -228,7 +286,7 @@ class CropClaimWidget extends StatelessWidget {
                       Icon(Icons.grass, color: Color(0xFF7BB53B), size: 20),
                       SizedBox(width: 8),
                       Text(
-                        'Crop Name',
+                        translate('crop_name_label'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -241,7 +299,7 @@ class CropClaimWidget extends StatelessWidget {
                   TextField(
                     controller: controller.cropNameController,
                     decoration: InputDecoration(
-                      hintText: 'e.g., Wheat, Rice, Cotton',
+                      hintText: translate('crop_name_hint'),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Colors.grey[300]!),
@@ -280,7 +338,7 @@ class CropClaimWidget extends StatelessWidget {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'Claim Details',
+                        translate('claim_details_label'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -294,8 +352,7 @@ class CropClaimWidget extends StatelessWidget {
                     controller: controller.messageController,
                     maxLines: 8,
                     decoration: InputDecoration(
-                      hintText:
-                          'Describe the damage, loss, or claim details...',
+                      hintText: translate('claim_details_hint'),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Colors.grey[300]!),
@@ -334,7 +391,7 @@ class CropClaimWidget extends StatelessWidget {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        'Evidence (Photos/Videos)',
+                        translate('evidence_label'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -350,7 +407,7 @@ class CropClaimWidget extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: controller.pickImage,
                           icon: Icon(Icons.image, size: 20),
-                          label: Text('Add Photo'),
+                          label: Text(translate('add_photo')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Color(0xFF7BB53B),
                             side: BorderSide(color: Color(0xFF7BB53B)),
@@ -366,7 +423,7 @@ class CropClaimWidget extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: controller.pickVideo,
                           icon: Icon(Icons.videocam, size: 20),
-                          label: Text('Add Video'),
+                          label: Text(translate('add_video')),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Color(0xFF54B5D9),
                             side: BorderSide(color: Color(0xFF54B5D9)),
@@ -402,7 +459,7 @@ class CropClaimWidget extends StatelessWidget {
                               ),
                               SizedBox(height: 8),
                               Text(
-                                'No files attached',
+                                translate('no_files_attached'),
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
@@ -410,7 +467,7 @@ class CropClaimWidget extends StatelessWidget {
                               ),
                               SizedBox(height: 4),
                               Text(
-                                'Add photos or videos as evidence',
+                                translate('add_evidence_hint'),
                                 style: TextStyle(
                                   color: Colors.grey[500],
                                   fontSize: 12,
@@ -457,8 +514,8 @@ class CropClaimWidget extends StatelessWidget {
                       : Icon(Icons.send, size: 20),
                   label: Text(
                     controller.isSending.value
-                        ? 'Submitting...'
-                        : 'Submit Claim',
+                        ? translate('submitting')
+                        : translate('submit_claim'),
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -474,12 +531,12 @@ class CropClaimWidget extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             SizedBox(height: 32),
 
             // My Claims Section
             Text(
-              'My Claims',
+              translate('my_claims'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -487,114 +544,129 @@ class CropClaimWidget extends StatelessWidget {
               ),
             ),
             SizedBox(height: 16),
-            
+
             Obx(() {
               if (controller.isLoadingClaims.value) {
                 return Center(child: CircularProgressIndicator());
               }
-              
+
               if (controller.myClaims.isEmpty) {
                 return Center(
                   child: Text(
-                    'No claims submitted yet',
+                    translate('no_claims_yet'),
                     style: TextStyle(color: Colors.grey),
                   ),
                 );
               }
-              
+
               return Column(
-                children: controller.myClaims.map((claim) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: _buildCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                claim['crop_name'] ?? 'Unknown Crop',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2A6E9B),
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: (claim['status'] == 'approved') 
-                                    ? Colors.green.withOpacity(0.1)
-                                    : (claim['status'] == 'rejected')
-                                        ? Colors.red.withOpacity(0.1)
-                                        : Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                (claim['status'] ?? 'pending').toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: (claim['status'] == 'approved') 
-                                      ? Colors.green
-                                      : (claim['status'] == 'rejected')
-                                          ? Colors.red
-                                          : Colors.orange,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          claim['claim_details'] ?? '',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: InkWell(
-                            onTap: () => Get.to(() => ClaimDetailView(claim: claim)),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Color(0xFF2A6E9B).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                children: controller.myClaims
+                    .map(
+                      (claim) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: _buildCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'View Details',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF2A6E9B),
+                                  Expanded(
+                                    child: Text(
+                                      claim['crop_name'] ??
+                                          translate('unknown_crop'),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2A6E9B),
+                                      ),
                                     ),
                                   ),
-                                  SizedBox(width: 4),
-                                  Icon(
-                                    Icons.arrow_forward,
-                                    size: 16,
-                                    color: Color(0xFF2A6E9B),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: (claim['status'] == 'approved')
+                                          ? Colors.green.withOpacity(0.1)
+                                          : (claim['status'] == 'rejected')
+                                          ? Colors.red.withOpacity(0.1)
+                                          : Colors.orange.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      (claim['status'] ?? 'pending')
+                                          .toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: (claim['status'] == 'approved')
+                                            ? Colors.green
+                                            : (claim['status'] == 'rejected')
+                                            ? Colors.red
+                                            : Colors.orange,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
+                              SizedBox(height: 8),
+                              Text(
+                                claim['claim_details'] ?? '',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                              SizedBox(height: 12),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: InkWell(
+                                  onTap: () => Get.to(
+                                    () => ClaimDetailView(claim: claim),
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF2A6E9B).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          translate('view_details'),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF2A6E9B),
+                                          ),
+                                        ),
+                                        SizedBox(width: 4),
+                                        Icon(
+                                          Icons.arrow_forward,
+                                          size: 16,
+                                          color: Color(0xFF2A6E9B),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                )).toList(),
+                      ),
+                    )
+                    .toList(),
               );
             }),
             SizedBox(height: 32),
@@ -710,7 +782,10 @@ class ClaimDetailView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Color(0xFF2A6E9B),
         elevation: 0,
-        title: Text('Claim Details', style: TextStyle(color: Colors.white)),
+        title: Text(
+          translate('claim_details_title'),
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Get.back(),
@@ -731,13 +806,17 @@ class ClaimDetailView extends StatelessWidget {
                     return Container(
                       color: Colors.grey[300],
                       child: Center(
-                        child: Icon(Icons.broken_image, size: 50, color: Colors.grey[500]),
+                        child: Icon(
+                          Icons.broken_image,
+                          size: 50,
+                          color: Colors.grey[500],
+                        ),
                       ),
                     );
                   },
                 ),
               ),
-            
+
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -748,7 +827,7 @@ class ClaimDetailView extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          claim['crop_name'] ?? 'Unknown Crop',
+                          claim['crop_name'] ?? translate('unknown_crop'),
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -757,13 +836,16 @@ class ClaimDetailView extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: (claim['status'] == 'approved') 
+                          color: (claim['status'] == 'approved')
                               ? Colors.green.withOpacity(0.1)
                               : (claim['status'] == 'rejected')
-                                  ? Colors.red.withOpacity(0.1)
-                                  : Colors.orange.withOpacity(0.1),
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -771,20 +853,20 @@ class ClaimDetailView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: (claim['status'] == 'approved') 
+                            color: (claim['status'] == 'approved')
                                 ? Colors.green
                                 : (claim['status'] == 'rejected')
-                                    ? Colors.red
-                                    : Colors.orange,
+                                ? Colors.red
+                                : Colors.orange,
                           ),
                         ),
                       ),
                     ],
                   ),
                   SizedBox(height: 24),
-                  
+
                   Text(
-                    'Claim Description',
+                    translate('claim_description'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -798,6 +880,7 @@ class ClaimDetailView extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
+
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),

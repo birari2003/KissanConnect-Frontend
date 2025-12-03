@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+import 'dart:ui';
 
 class Language {
   final String name;
@@ -17,17 +19,17 @@ class SelectlanguageController extends GetxController {
   final List<Language> languages = [
     Language(
       name: 'English',
-      code: 'en-US',
+      code: 'en',
       greeting: 'You have selected English, thank you',
     ),
     Language(
       name: 'हिंदी',
-      code: 'hi-IN',
+      code: 'hi',
       greeting: 'आपने हिंदी चुनी है, धन्यवाद',
     ),
     Language(
       name: 'मराठी',
-      code: 'mr-IN',
+      code: 'mr',
       greeting: 'तुम्ही मराठी निवडली आहे, धन्यवाद',
     ),
   ];
@@ -54,7 +56,7 @@ class SelectlanguageController extends GetxController {
         Future.delayed(const Duration(milliseconds: 500), () {
           Get.offAllNamed(
             '/loginsignup',
-            arguments: {'language': selectedLanguage.value?.code ?? 'en-US'},
+            arguments: {'language': selectedLanguage.value?.code ?? 'en'},
           );
         });
       });
@@ -66,7 +68,7 @@ class SelectlanguageController extends GetxController {
         // Still navigate even if TTS fails
         Get.offAllNamed(
           '/loginsignup',
-          arguments: {'language': selectedLanguage.value?.code ?? 'en-US'},
+          arguments: {'language': selectedLanguage.value?.code ?? 'en'},
         );
       });
     } catch (e) {
@@ -77,7 +79,14 @@ class SelectlanguageController extends GetxController {
   Future<void> selectLanguage(Language language) async {
     try {
       selectedLanguage.value = language;
-      await flutterTts.setLanguage(language.code);
+
+      // Change app locale
+      await changeLocale(Get.context!, language.code);
+      Get.updateLocale(Locale(language.code));
+
+      await flutterTts.setLanguage(
+        language.code == 'en' ? 'en-US' : '${language.code}-IN',
+      );
       isSpeaking.value = true;
 
       // Stop any ongoing speech before starting new one

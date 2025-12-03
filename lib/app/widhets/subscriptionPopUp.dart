@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../utils/ui_utils.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+
+import '../controllers/payment_controller.dart';
 
 class SubscriptionPopup extends StatelessWidget {
   const SubscriptionPopup({Key? key}) : super(key: key);
@@ -68,8 +69,8 @@ class SubscriptionPopup extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Unlock Premium',
+                  Text(
+                    translate('unlock_premium'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,
@@ -87,8 +88,8 @@ class SubscriptionPopup extends StatelessWidget {
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text(
-                      '₹499/year',
+                    child: Text(
+                      translate('subscription_price'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -106,8 +107,8 @@ class SubscriptionPopup extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Premium Benefits:',
+                    Text(
+                      translate('premium_benefits_title'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -117,31 +118,31 @@ class SubscriptionPopup extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildCompactBenefit(
                       icon: Icons.send_rounded,
-                      text: 'Send info directly to admin',
+                      text: translate('benefit_send_info'),
                     ),
                     _buildCompactBenefit(
                       icon: Icons.chat_bubble_rounded,
-                      text: 'Discuss issues with admin',
+                      text: translate('benefit_discuss_issues'),
                     ),
                     _buildCompactBenefit(
                       icon: Icons.email_rounded,
-                      text: 'Email government via admin',
+                      text: translate('benefit_email_govt'),
                     ),
                     _buildCompactBenefit(
                       icon: Icons.people_rounded,
-                      text: 'View nearby farmers with better prices',
+                      text: translate('benefit_view_nearby'),
                     ),
                     _buildCompactBenefit(
                       icon: Icons.contact_phone_rounded,
-                      text: 'Access farmer contact info',
+                      text: translate('benefit_access_contact'),
                     ),
                     _buildCompactBenefit(
                       icon: Icons.camera_alt_rounded,
-                      text: 'Upload crop images & set prices',
+                      text: translate('benefit_upload_images'),
                     ),
                     _buildCompactBenefit(
                       icon: Icons.location_on_rounded,
-                      text: 'Location-based farmer insights',
+                      text: translate('benefit_location_insights'),
                     ),
                   ],
                 ),
@@ -163,25 +164,8 @@ class SubscriptionPopup extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () async {
-                        Get.back();
-                        final url = Uri.parse(
-                          'https://razorpay.me/@somayuinfotech',
-                        );
-                        try {
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(
-                              url,
-                              mode: LaunchMode.externalApplication,
-                            );
-                          } else {
-                            UiUtils.showSuccessSnackbar(
-                              'Success',
-                              'Subscribed to Premium Plan successfully',
-                            );
-                          }
-                        } catch (e) {
-                          UiUtils.showErrorSnackbar('Error', 'Payment failed');
-                        }
+                        final paymentController = Get.put(PaymentController());
+                        await paymentController.startPayment();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2E8B57),
@@ -192,8 +176,8 @@ class SubscriptionPopup extends StatelessWidget {
                         ),
                         elevation: 2,
                       ),
-                      child: const Text(
-                        'Subscribe Now',
+                      child: Text(
+                        translate('subscribe_now'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -204,8 +188,8 @@ class SubscriptionPopup extends StatelessWidget {
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: () => Get.back(),
-                    child: const Text(
-                      'Maybe Later',
+                    child: Text(
+                      translate('maybe_later'),
                       style: TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                   ),

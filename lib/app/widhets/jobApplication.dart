@@ -2,11 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../utils/ui_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../services/farmerServices.dart';
+import '../services/translation_service.dart';
 
 class JobApplicationController extends GetxController {
   final jobs = <dynamic>[].obs;
   final isLoading = false.obs;
+  final TranslationService _translationService = TranslationService();
+
+  Future<String> _translateIfNeed(String text) async {
+    try {
+      String languageCode = 'en';
+      if (Get.context != null) {
+        try {
+          languageCode = LocalizedApp.of(
+            Get.context!,
+          ).delegate.currentLocale.languageCode;
+        } catch (e) {
+          // Fallback or ignore
+        }
+      }
+      return await _translationService.translateText(text, languageCode);
+    } catch (e) {
+      print('Error translating: $e');
+      return text;
+    }
+  }
 
   @override
   void onInit() {
@@ -18,6 +40,43 @@ class JobApplicationController extends GetxController {
     isLoading.value = true;
     try {
       final fetchedJobs = await FarmerService().getJobs();
+
+      for (var job in fetchedJobs) {
+        if (job['job_title'] != null) {
+          job['job_title'] = await _translateIfNeed(job['job_title']);
+        }
+        if (job['company_name'] != null) {
+          job['company_name'] = await _translateIfNeed(job['company_name']);
+        }
+        if (job['location'] != null) {
+          job['location'] = await _translateIfNeed(job['location']);
+        }
+        if (job['description'] != null) {
+          job['description'] = await _translateIfNeed(job['description']);
+        }
+        // Translate job_type if it's a known key
+        if (job['job_type'] != null) {
+          String jobType = job['job_type']
+              .toString()
+              .toLowerCase()
+              .replaceAll('-', '_')
+              .replaceAll(' ', '_');
+          // Check if it matches a translation key
+          if (jobType == 'full_time' || jobType == 'fulltime') {
+            job['job_type'] = translate('full_time');
+          } else if (jobType == 'part_time' || jobType == 'parttime') {
+            job['job_type'] = translate('part_time');
+          } else if (jobType == 'contract') {
+            job['job_type'] = translate('contract');
+          } else if (jobType == 'temporary') {
+            job['job_type'] = translate('temporary');
+          } else {
+            // Otherwise translate the raw value
+            job['job_type'] = await _translateIfNeed(job['job_type']);
+          }
+        }
+      }
+
       jobs.assignAll(fetchedJobs);
     } catch (e) {
       print('Error fetching jobs: $e');
@@ -107,7 +166,7 @@ class JobApplication extends StatelessWidget {
     // Parse date if needed
     final postedDate = job['created_at'] != null
         ? job['created_at'].toString().split('T')[0]
-        : 'Recently';
+        : translate('posted_recently');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -176,7 +235,7 @@ class JobApplication extends StatelessWidget {
                         ],
                       ),
                     ),
-                    _buildStatusChip(job['job_type'] ?? 'Full-time'),
+                    _buildStatusChip(job['job_type'] ?? translate('full_time')),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -191,7 +250,7 @@ class JobApplication extends StatelessWidget {
                     const SizedBox(width: 24),
                     _buildInfoItem(
                       Icons.currency_rupee,
-                      job['salary_range'] ?? 'Negotiable',
+                      job['salary_range'] ?? translate('negotiable'),
                     ),
                   ],
                 ),
@@ -200,7 +259,8 @@ class JobApplication extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Posted: $postedDate',
+                      '${translate('posted_on')}: $postedDate',
+
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[500],
@@ -210,7 +270,8 @@ class JobApplication extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          'View Details',
+                          translate('view_details'),
+
                           style: TextStyle(
                             color: Color(0xFF2E8B57),
                             fontWeight: FontWeight.w600,
@@ -285,7 +346,7 @@ class JobDetailView extends StatelessWidget {
     final controller = Get.find<JobApplicationController>();
     final postedDate = job['created_at'] != null
         ? job['created_at'].toString().split('T')[0]
-        : 'Recently';
+        : translate('posted_recently');
     final attachment = job['attachment'];
 
     return Scaffold(
@@ -294,7 +355,8 @@ class JobDetailView extends StatelessWidget {
         backgroundColor: Color(0xFF2E8B57),
         elevation: 0,
         title: Text(
-          'Job Details',
+          translate('job_details'),
+
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
@@ -371,25 +433,26 @@ class JobDetailView extends StatelessWidget {
                   SizedBox(height: 24),
                   _buildDetailRow(
                     Icons.work_outline,
-                    'Job Type',
-                    job['job_type'] ?? 'Full-time',
+                    translate('job_type'),
+                    job['job_type'] ?? translate('full_time'),
                   ),
                   SizedBox(height: 16),
                   _buildDetailRow(
                     Icons.location_on_outlined,
-                    'Location',
+                    translate('location_label'),
                     job['location'] ?? 'Remote',
                   ),
                   SizedBox(height: 16),
                   _buildDetailRow(
                     Icons.currency_rupee,
-                    'Salary',
-                    job['salary_range'] ?? 'Negotiable',
+                    translate('salary'),
+                    job['salary_range'] ?? translate('negotiable'),
                   ),
                   SizedBox(height: 16),
                   _buildDetailRow(
                     Icons.calendar_today_outlined,
-                    'Posted On',
+                    translate('posted_on'),
+
                     postedDate,
                   ),
                 ],
@@ -398,7 +461,8 @@ class JobDetailView extends StatelessWidget {
             SizedBox(height: 24),
 
             Text(
-              'Job Description',
+              translate('description'),
+
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -438,7 +502,8 @@ class JobDetailView extends StatelessWidget {
                   onPressed: () => controller.openJobUrl(attachment),
                   icon: Icon(Icons.picture_as_pdf, size: 22),
                   label: Text(
-                    'View Official Document',
+                    translate('view_official_document'),
+
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(

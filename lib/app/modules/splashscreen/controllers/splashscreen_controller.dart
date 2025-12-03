@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kissan_connect/app/routes/app_pages.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+import 'dart:ui';
 
 class SplashScreenController extends GetxController {
   // Duration for splash screen before navigating
@@ -23,6 +25,22 @@ class SplashScreenController extends GetxController {
   Future<void> checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+
+    // Load saved language
+    String? savedLanguage = prefs.getString('language');
+    if (savedLanguage != null) {
+      savedLanguage = savedLanguage.toLowerCase();
+      // Map backend language names to codes (in case old data exists)
+      if (savedLanguage == 'marathi')
+        savedLanguage = 'mr';
+      else if (savedLanguage == 'hindi')
+        savedLanguage = 'hi';
+      else if (savedLanguage == 'english')
+        savedLanguage = 'en';
+
+      await changeLocale(Get.context!, savedLanguage);
+      Get.updateLocale(Locale(savedLanguage));
+    }
 
     if (token != null && token.isNotEmpty) {
       // User is logged in, check role

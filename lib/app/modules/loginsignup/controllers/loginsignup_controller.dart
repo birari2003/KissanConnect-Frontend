@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/authServices.dart';
 import '../../../utils/ui_utils.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+import 'dart:ui';
 
 class LoginsignupController extends GetxController {
   // Observable to toggle between login and signup
@@ -88,6 +90,31 @@ class LoginsignupController extends GetxController {
         }
         if (response['data'] != null) {
           await prefs.setString('user_data', jsonEncode(response['data']));
+
+          // Save and apply language preference
+          if (response['data']['language_preference'] != null) {
+            String lang = response['data']['language_preference']
+                .toString()
+                .toLowerCase();
+
+            // Map backend language names to codes
+            if (lang == 'marathi')
+              lang = 'mr';
+            else if (lang == 'hindi')
+              lang = 'hi';
+            else if (lang == 'english')
+              lang = 'en';
+
+            await prefs.setString('language', lang);
+
+            // Update app locale
+            try {
+              await changeLocale(Get.context!, lang);
+              Get.updateLocale(Locale(lang));
+            } catch (e) {
+              // Handle error silently or log to crash reporting
+            }
+          }
         }
 
         UiUtils.showSuccessSnackbar(

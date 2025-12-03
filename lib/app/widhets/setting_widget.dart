@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'dart:convert';
-import '../routes/app_pages.dart';
+
 import '../services/farmerServices.dart';
+import '../services/translation_service.dart';
+
 import '../utils/ui_utils.dart';
+import '../controllers/payment_controller.dart';
 
 class SettingsWidget extends StatefulWidget {
   final String selectedLanguage;
@@ -30,6 +34,26 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   String _farmerEmail = '';
   String _farmerPhoto = '';
   final FarmerService _farmerService = FarmerService();
+  final TranslationService _translationService = TranslationService();
+
+  Future<String> _translateIfNeed(String text) async {
+    try {
+      String languageCode = 'en';
+      if (Get.context != null) {
+        try {
+          languageCode = LocalizedApp.of(
+            Get.context!,
+          ).delegate.currentLocale.languageCode;
+        } catch (e) {
+          // Fallback or ignore
+        }
+      }
+      return await _translationService.translateText(text, languageCode);
+    } catch (e) {
+      print('Error translating: $e');
+      return text;
+    }
+  }
 
   @override
   void initState() {
@@ -49,7 +73,13 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         final userData = jsonDecode(userDataString);
         if (mounted) {
           setState(() {
-            if (userData['name'] != null) _farmerName = userData['name'];
+            if (userData['name'] != null) {
+              _translateIfNeed(userData['name']).then((translatedName) {
+                if (mounted) setState(() => _farmerName = translatedName);
+              });
+              _farmerName = userData['name']; // Show original first
+            }
+
             if (userData['email'] != null) _farmerEmail = userData['email'];
           });
         }
@@ -65,7 +95,13 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         if (mounted) {
           setState(() {
             if (user != null) {
-              if (user['name'] != null) _farmerName = user['name'];
+              if (user['name'] != null) {
+                _translateIfNeed(user['name']).then((translatedName) {
+                  if (mounted) setState(() => _farmerName = translatedName);
+                });
+                _farmerName = user['name'];
+              }
+
               if (user['email'] != null) _farmerEmail = user['email'];
             }
             if (profile != null && profile['passport_photo'] != null) {
@@ -119,12 +155,12 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(translate('logout_title')),
+        content: Text(translate('logout_confirmation')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(translate('cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -132,7 +168,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Logout'),
+            child: Text(translate('logout_title')),
           ),
         ],
       ),
@@ -148,7 +184,10 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           // Navigate to login screen
           Get.offAllNamed('/loginsignup');
 
-          UiUtils.showSuccessSnackbar('Success', 'Logged out successfully');
+          UiUtils.showSuccessSnackbar(
+            translate('success_title'),
+            translate('logout_success'),
+          );
         }
       } catch (e) {
         print('Error during logout: $e');
@@ -206,8 +245,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
       pinned: true,
       backgroundColor: const Color(0xFF2E8B57),
       flexibleSpace: FlexibleSpaceBar(
-        title: const Text(
-          'Settings',
+        title: Text(
+          translate('settings_title'),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -282,7 +321,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                 Text(
                   _farmerEmail.isNotEmpty
                       ? _farmerEmail
-                      : 'Manage your account settings',
+                      : translate('manage_account_settings'),
                   style: TextStyle(
                     fontSize: 14,
                     color: const Color(0xFF2D323A).withOpacity(0.6),
@@ -307,8 +346,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Preferences',
+        Text(
+          translate('preferences_section'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -332,8 +371,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
             children: [
               _buildSettingTile(
                 icon: Icons.notifications_outlined,
-                title: 'Notifications',
-                subtitle: 'Enable push notifications',
+                title: translate('notifications_title'),
+                subtitle: translate('notifications_subtitle'),
                 trailing: Switch(
                   value: _notificationsEnabled,
                   onChanged: _saveNotificationSetting,
@@ -343,8 +382,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               const Divider(height: 1),
               _buildSettingTile(
                 icon: Icons.dark_mode_outlined,
-                title: 'Dark Mode',
-                subtitle: 'Enable dark theme',
+                title: translate('dark_mode_title'),
+                subtitle: translate('dark_mode_subtitle'),
                 trailing: Switch(
                   value: _darkModeEnabled,
                   onChanged: _saveDarkModeSetting,
@@ -354,7 +393,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               const Divider(height: 1),
               _buildSettingTile(
                 icon: Icons.language_outlined,
-                title: 'Language',
+                title: translate('language_title'),
                 subtitle: _getLanguageName(_selectedLanguage),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () => _showLanguageDialog(),
@@ -370,8 +409,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'About',
+        Text(
+          translate('about_section'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -395,8 +434,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
             children: [
               _buildSettingTile(
                 icon: Icons.help_outline,
-                title: 'Help & Support',
-                subtitle: 'Get help with the app',
+                title: translate('help_support_title'),
+                subtitle: translate('help_support_subtitle'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   // Navigate to help
@@ -405,8 +444,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               const Divider(height: 1),
               _buildSettingTile(
                 icon: Icons.privacy_tip_outlined,
-                title: 'Privacy Policy',
-                subtitle: 'Read our privacy policy',
+                title: translate('privacy_policy_title'),
+                subtitle: translate('privacy_policy_subtitle'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   // Navigate to privacy policy
@@ -415,8 +454,10 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               const Divider(height: 1),
               _buildSettingTile(
                 icon: Icons.info_outline,
-                title: 'About App',
-                subtitle: 'Version 1.0.0',
+                title: translate('about_app_title'),
+                subtitle: translate(
+                  'version_info',
+                ), // Keeping version hardcoded or translatable if needed, usually version is standard
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   // Show about dialog
@@ -426,11 +467,12 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               const Divider(height: 1),
               _buildSettingTile(
                 icon: Icons.payment,
-                title: 'Make Payment',
-                subtitle: 'Proceed to payment gateway',
+                title: translate('make_payment_title'),
+                subtitle: translate('make_payment_subtitle'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Get.toNamed(Routes.PAYMENTGETWAY);
+                onTap: () async {
+                  final paymentController = Get.put(PaymentController());
+                  await paymentController.startPayment();
                 },
               ),
             ],
@@ -502,11 +544,11 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.logout, size: 24),
             SizedBox(width: 12),
             Text(
-              'Logout',
+              translate('logout_title'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
@@ -532,7 +574,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
+        title: Text(translate('select_language')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -544,7 +586,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(translate('cancel')),
           ),
         ],
       ),
@@ -570,13 +612,13 @@ class _SettingsWidgetState extends State<SettingsWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About Smart Shetkari'),
+        title: Text(translate('about_app_dialog_title')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Smart Shetkari',
+            Text(
+              translate('app_name'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -586,20 +628,15 @@ class _SettingsWidgetState extends State<SettingsWidget> {
             const SizedBox(height: 8),
             const Text('Version 1.0.0'),
             const SizedBox(height: 16),
-            const Text(
-              'A comprehensive platform for farmers to manage their agricultural activities, connect with resources, and access government schemes.',
-            ),
+            Text(translate('app_description')),
             const SizedBox(height: 16),
-            const Text(
-              '© 2024 Smart Shetkari. All rights reserved.',
-              style: TextStyle(fontSize: 12),
-            ),
+            Text(translate('copyright_text'), style: TextStyle(fontSize: 12)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(translate('close')),
           ),
         ],
       ),

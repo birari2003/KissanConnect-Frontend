@@ -3,11 +3,14 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../widhets/subscriptionPopUp.dart';
 import '../../../services/farmerServices.dart';
+import '../../../services/translation_service.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 
 enum RequestStatus { accepted, rejected, pending }
 
 class FarmerscreendashboardController extends GetxController {
   final FarmerService _farmerService = FarmerService();
+  final TranslationService _translationService = TranslationService();
 
   // Bottom navigation
   final RxInt currentTabIndex = 0.obs;
@@ -42,8 +45,13 @@ class FarmerscreendashboardController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadUserData();
     _showSubscriptionPopupAfterDelay();
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    _loadUserData();
     loadMessages();
   }
 
@@ -69,7 +77,9 @@ class FarmerscreendashboardController extends GetxController {
       // 1. Load basic user data from local storage first (fast)
       if (userDataString != null) {
         final userData = jsonDecode(userDataString);
-        if (userData['name'] != null) farmerName.value = userData['name'];
+        if (userData['name'] != null)
+          farmerName.value = await _translateIfNeed(userData['name']);
+
         if (userData['email'] != null) farmerEmail.value = userData['email'];
         if (userData['phone'] != null) farmerPhone.value = userData['phone'];
       }
@@ -83,7 +93,9 @@ class FarmerscreendashboardController extends GetxController {
           final profile = data['farmer_profile'];
 
           if (user != null) {
-            if (user['name'] != null) farmerName.value = user['name'];
+            if (user['name'] != null)
+              farmerName.value = await _translateIfNeed(user['name']);
+
             if (user['email'] != null) farmerEmail.value = user['email'];
             if (user['phone'] != null) farmerPhone.value = user['phone'];
           }
@@ -113,9 +125,11 @@ class FarmerscreendashboardController extends GetxController {
               locationParts.add(profile['state']['name']);
 
             if (locationParts.isNotEmpty) {
-              farmLocation.value = locationParts.join(', ');
+              farmLocation.value = await _translateIfNeed(
+                locationParts.join(', '),
+              );
             } else {
-              farmLocation.value = 'India';
+              farmLocation.value = await _translateIfNeed('India');
             }
 
             // Photo
@@ -130,8 +144,53 @@ class FarmerscreendashboardController extends GetxController {
       }
     } catch (e) {
       print('Error loading user data: $e');
-      farmerName.value = 'Farmer';
-      farmLocation.value = 'India';
+      farmerName.value = await _translateIfNeed('Farmer');
+      farmLocation.value = await _translateIfNeed('India');
+    }
+  }
+
+  Future<String> _translateIfNeed(String text) async {
+    try {
+      String languageCode = 'en';
+
+      // Try getting from LocalizedApp
+      if (Get.context != null) {
+        try {
+          languageCode = LocalizedApp.of(
+            Get.context!,
+          ).delegate.currentLocale.languageCode;
+        } catch (e) {
+          print('DEBUG: LocalizedApp lookup failed: $e');
+        }
+      }
+
+      // Fallback to SharedPreferences if still default or context missing
+      if (languageCode == 'en' || Get.context == null) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          // Try 'language_code' first (common convention), then check if flutter_translate uses something else.
+          // flutter_translate uses 'locale' key by default.
+          final savedLocale = prefs.getString('locale');
+          if (savedLocale != null) {
+            // savedLocale might be 'en_US' or 'hi'
+            languageCode = savedLocale;
+            if (languageCode.contains('_')) {
+              languageCode = languageCode.split('_')[0];
+            }
+            print(
+              'DEBUG: Found locale in SharedPreferences: $savedLocale -> $languageCode',
+            );
+          }
+        } catch (e) {
+          print('DEBUG: Prefs lookup failed: $e');
+        }
+      }
+
+      print('DEBUG: Detected Language: $languageCode, Translating: $text');
+      return await _translationService.translateText(text, languageCode);
+    } catch (e) {
+      print('Error getting locale or translating: $e');
+      return text;
     }
   }
 
@@ -183,6 +242,25 @@ class FarmerscreendashboardController extends GetxController {
           'created_at': item['created_at'] ?? '',
         };
       }).toList();
+
+      // Translate messages
+      final translatedMessages = <dynamic>[];
+      for (var item in messages) {
+        final msg = item['message'] as String;
+        final senderName = item['sender_name'] as String;
+
+        final translatedMsg = await _translateIfNeed(msg);
+        final translatedSender = await _translateIfNeed(
+          senderName,
+        ); // Optional: Translate name if needed
+
+        translatedMessages.add({
+          ...item,
+          'message': translatedMsg,
+          'sender_name': translatedSender,
+        });
+      }
+      messages.value = translatedMessages;
     } catch (e) {
       print('Error loading messages: $e');
       messages.value = [];

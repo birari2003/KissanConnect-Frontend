@@ -9,6 +9,7 @@ import '../../../widhets/query_popup.dart';
 import '../../../widhets/cropList.dart';
 import '../../../widhets/govSchema.dart';
 import '../../../widhets/jobApplication.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 
 class FarmerscreendashboardView
     extends GetView<FarmerscreendashboardController> {
@@ -16,6 +17,15 @@ class FarmerscreendashboardView
 
   @override
   Widget build(BuildContext context) {
+    print('DEBUG: --- Dashboard Build Start ---');
+    print('DEBUG: Locale: ${LocalizedApp.of(context).delegate.currentLocale}');
+    print('DEBUG: Key "app_title": ${translate('app_title')}');
+    print('DEBUG: Key "welcome_back": ${translate('welcome_back')}');
+    print('DEBUG: Key "dashboard": ${translate('dashboard')}');
+    print('DEBUG: Key "my_profile": ${translate('my_profile')}');
+    print('DEBUG: Key "role_admin": ${translate('role_admin')}');
+    print('DEBUG: --- Dashboard Build End ---');
+
     return Scaffold(
       body: Stack(
         children: [
@@ -114,8 +124,8 @@ class FarmerscreendashboardView
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Smart Shetkari',
+                Text(
+                  translate('app_title'),
                   style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ],
@@ -131,49 +141,49 @@ class FarmerscreendashboardView
                   children: [
                     _buildNavItem(
                       icon: Icons.dashboard,
-                      title: 'Dashboard',
+                      title: translate('dashboard'),
                       index: 0,
                       isSelected: controller.selectedIndex.value == 0,
                     ),
                     _buildNavItem(
                       icon: Icons.app_registration,
-                      title: 'My Profile',
+                      title: translate('my_profile'),
                       index: 1,
                       isSelected: controller.selectedIndex.value == 1,
                     ),
                     _buildNavItem(
                       icon: Icons.agriculture,
-                      title: 'Crop Claim',
+                      title: translate('crop_claim'),
                       index: 2,
                       isSelected: controller.selectedIndex.value == 2,
                     ),
                     _buildNavItem(
                       icon: Icons.storefront,
-                      title: 'Sell Crop',
+                      title: translate('sell_crop'),
                       index: 4,
                       isSelected: controller.selectedIndex.value == 4,
                     ),
                     _buildNavItem(
                       icon: Icons.shopping_basket,
-                      title: 'Marketplace',
+                      title: translate('marketplace'),
                       index: 5,
                       isSelected: controller.selectedIndex.value == 5,
                     ),
                     _buildNavItem(
                       icon: Icons.account_balance,
-                      title: 'Gov Schemes',
+                      title: translate('gov_schemes'),
                       index: 6,
                       isSelected: controller.selectedIndex.value == 6,
                     ),
                     _buildNavItem(
                       icon: Icons.work,
-                      title: 'Jobs',
+                      title: translate('jobs'),
                       index: 7,
                       isSelected: controller.selectedIndex.value == 7,
                     ),
                     _buildNavItem(
                       icon: Icons.settings,
-                      title: 'Settings',
+                      title: translate('settings'),
                       index: 3,
                       isSelected: controller.selectedIndex.value == 3,
                     ),
@@ -249,63 +259,63 @@ class FarmerscreendashboardView
         case 0:
           return _buildPageWithHeader(
             context,
-            'Dashboard',
+            translate('dashboard'),
             Icons.dashboard,
             _buildDashboardTab(),
           );
         case 1:
           return _buildPageWithHeader(
             context,
-            'My Profile',
+            translate('my_profile'),
             Icons.app_registration,
             _buildRegistrationTab(),
           );
         case 2:
           return _buildPageWithHeader(
             context,
-            'Crop Claim',
+            translate('crop_claim'),
             Icons.agriculture,
             _buildCropClaimTab(),
           );
         case 3:
           return _buildPageWithHeader(
             context,
-            'Settings',
+            translate('settings'),
             Icons.settings,
             _buildSettingsTab(),
           );
         case 4:
           return _buildPageWithHeader(
             context,
-            'Sell Crop',
+            translate('sell_crop'),
             Icons.storefront,
             _buildSellCropTab(),
           );
         case 5:
           return _buildPageWithHeader(
             context,
-            'Marketplace',
+            translate('marketplace'),
             Icons.shopping_basket,
             _buildMarketplaceTab(),
           );
         case 6:
           return _buildPageWithHeader(
             context,
-            'Government Schemes',
+            translate('government_schemes'),
             Icons.account_balance,
             const GovSchema(),
           );
         case 7:
           return _buildPageWithHeader(
             context,
-            'Job Applications',
+            translate('job_applications'),
             Icons.work,
             const JobApplication(),
           );
         default:
           return _buildPageWithHeader(
             context,
-            'Dashboard',
+            translate('dashboard'),
             Icons.dashboard,
             _buildDashboardTab(),
           );
@@ -420,8 +430,8 @@ class FarmerscreendashboardView
       pinned: true,
       backgroundColor: const Color(0xFF2E8B57),
       flexibleSpace: FlexibleSpaceBar(
-        title: const Text(
-          'Smart Shetkari',
+        title: Text(
+          translate('app_title'),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -534,8 +544,8 @@ class FarmerscreendashboardView
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Welcome Back!',
+                          Text(
+                            translate('welcome_back'),
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: 14,
@@ -604,7 +614,7 @@ class FarmerscreendashboardView
                     SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'Messages from Admin',
+                        translate('messages_from_admin'),
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -623,7 +633,7 @@ class FarmerscreendashboardView
                   Get.dialog(QueryPopup());
                 },
                 icon: Icon(Icons.question_answer, size: 18),
-                label: Text('Ask Query'),
+                label: Text(translate('ask_query')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF2E8B57),
                   foregroundColor: Colors.white,
@@ -659,7 +669,7 @@ class FarmerscreendashboardView
                       CircularProgressIndicator(color: Color(0xFF2E8B57)),
                       SizedBox(height: 12),
                       Text(
-                        'Loading messages...',
+                        translate('loading_messages'),
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
@@ -702,7 +712,7 @@ class FarmerscreendashboardView
                     ),
                     SizedBox(height: 16),
                     Text(
-                      'No New Messages',
+                      translate('no_new_messages'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -711,7 +721,7 @@ class FarmerscreendashboardView
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Important updates from the admin\nwill appear here.',
+                      translate('important_updates'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -850,7 +860,7 @@ class FarmerscreendashboardView
         children: [
           Expanded(
             child: _buildStatCard(
-              'Total',
+              translate('total'),
               controller.totalRequests.value.toString(),
               Icons.list_alt,
               const Color(0xFF3C9ED0),
@@ -860,7 +870,7 @@ class FarmerscreendashboardView
           const SizedBox(width: 12),
           Expanded(
             child: _buildStatCard(
-              'Accepted',
+              translate('accepted'),
               controller.acceptedRequests.value.toString(),
               Icons.check_circle,
               const Color(0xFF2E8B57),
@@ -870,7 +880,7 @@ class FarmerscreendashboardView
           const SizedBox(width: 12),
           Expanded(
             child: _buildStatCard(
-              'Pending',
+              translate('pending'),
               controller.pendingRequests.value.toString(),
               Icons.pending,
               const Color(0xFFFFC300),
@@ -952,8 +962,8 @@ class FarmerscreendashboardView
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Current Request Status',
+          Text(
+            translate('current_request_status'),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -1019,8 +1029,8 @@ class FarmerscreendashboardView
             child: Icon(Icons.check_circle, color: Color(0xFF2E8B57), size: 48),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Request Approved',
+          Text(
+            translate('request_approved'),
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -1028,8 +1038,8 @@ class FarmerscreendashboardView
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Your registration has been verified and approved.',
+          Text(
+            translate('request_approved_desc'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, color: Colors.grey),
           ),
@@ -1065,8 +1075,8 @@ class FarmerscreendashboardView
             child: Icon(Icons.cancel, color: Colors.red, size: 48),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Request Rejected',
+          Text(
+            translate('request_rejected'),
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -1074,8 +1084,8 @@ class FarmerscreendashboardView
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Your registration request was not approved.',
+          Text(
+            translate('request_rejected_desc'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, color: Colors.grey),
           ),
@@ -1118,8 +1128,8 @@ class FarmerscreendashboardView
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Request Pending',
+          Text(
+            translate('request_pending'),
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -1127,8 +1137,8 @@ class FarmerscreendashboardView
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Your request is currently under review.',
+          Text(
+            translate('request_pending_desc'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, color: Colors.grey),
           ),

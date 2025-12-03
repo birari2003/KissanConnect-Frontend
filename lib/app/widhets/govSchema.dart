@@ -2,11 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/ui_utils.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../services/farmerServices.dart';
+import '../services/translation_service.dart';
 
 class GovSchemaController extends GetxController {
   final schemes = <dynamic>[].obs;
   final isLoading = false.obs;
+  final TranslationService _translationService = TranslationService();
+
+  Future<String> _translateIfNeed(String text) async {
+    try {
+      String languageCode = 'en';
+      if (Get.context != null) {
+        try {
+          languageCode = LocalizedApp.of(
+            Get.context!,
+          ).delegate.currentLocale.languageCode;
+        } catch (e) {
+          // Fallback or ignore
+        }
+      }
+      return await _translationService.translateText(text, languageCode);
+    } catch (e) {
+      print('Error translating: $e');
+      return text;
+    }
+  }
 
   @override
   void onInit() {
@@ -18,6 +40,16 @@ class GovSchemaController extends GetxController {
     isLoading.value = true;
     try {
       final fetchedSchemes = await FarmerService().getGovernmentSchemes();
+
+      for (var scheme in fetchedSchemes) {
+        if (scheme['title'] != null) {
+          scheme['title'] = await _translateIfNeed(scheme['title']);
+        }
+        if (scheme['description'] != null) {
+          scheme['description'] = await _translateIfNeed(scheme['description']);
+        }
+      }
+
       schemes.assignAll(fetchedSchemes);
     } catch (e) {
       print('Error fetching schemes: $e');
@@ -180,7 +212,7 @@ class GovSchema extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Posted on: $publishedDate',
+                      '${translate('posted_on')}: $publishedDate',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[500],
@@ -189,13 +221,14 @@ class GovSchema extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      'Read More',
+                      translate('read_more'),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF7BB53B),
                       ),
                     ),
+
                     const SizedBox(width: 4),
                     Icon(
                       Icons.arrow_forward,
@@ -234,7 +267,11 @@ class SchemeDetailView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Color(0xFF2A6E9B),
         elevation: 0,
-        title: Text('Scheme Details', style: TextStyle(color: Colors.white)),
+        title: Text(
+          translate('scheme_details'),
+          style: TextStyle(color: Colors.white),
+        ),
+
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Get.back(),
@@ -259,7 +296,7 @@ class SchemeDetailView extends StatelessWidget {
                 Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
                 SizedBox(width: 8),
                 Text(
-                  'Posted on: $publishedDate',
+                  '${translate('posted_on')}: $publishedDate',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
@@ -293,7 +330,8 @@ class SchemeDetailView extends StatelessWidget {
                   ),
                   SizedBox(height: 12),
                   Text(
-                    scheme['description'] ?? 'No description available.',
+                    scheme['description'] ??
+                        translate('no_description_available'),
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.black87,
@@ -309,7 +347,8 @@ class SchemeDetailView extends StatelessWidget {
                         onPressed: () =>
                             controller.openSchemeUrl(scheme['attachment']),
                         icon: Icon(Icons.picture_as_pdf),
-                        label: Text('View Official Document'),
+                        label: Text(translate('view_official_document')),
+
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF2A6E9B),
                           foregroundColor: Colors.white,

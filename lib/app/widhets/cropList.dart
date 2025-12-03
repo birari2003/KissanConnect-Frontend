@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../widhets/subscriptionPopUp.dart';
+
 import '../services/farmerServices.dart';
+import '../services/translation_service.dart';
 
 // Crop Model
 class CropModel {
@@ -30,6 +33,41 @@ class CropListController extends GetxController {
   // Static data for now
   final crops = <CropModel>[].obs;
   final isLoading = false.obs;
+  final TranslationService _translationService = TranslationService();
+
+  Future<String> _translateIfNeed(String text) async {
+    try {
+      String languageCode = 'en';
+      if (Get.context != null) {
+        try {
+          languageCode = LocalizedApp.of(
+            Get.context!,
+          ).delegate.currentLocale.languageCode;
+        } catch (e) {
+          // Fallback or ignore
+        }
+      }
+      return await _translationService.translateText(text, languageCode);
+    } catch (e) {
+      print('Error translating: $e');
+      return text;
+    }
+  }
+
+  String _getTranslatedUnit(String unit) {
+    switch (unit.toLowerCase()) {
+      case 'quintal':
+        return translate('quintal');
+      case 'kg':
+        return translate('kg');
+      case 'ton':
+        return translate('ton');
+      case 'bag':
+        return translate('bag');
+      default:
+        return unit;
+    }
+  }
 
   @override
   void onInit() {
@@ -41,8 +79,8 @@ class CropListController extends GetxController {
     isLoading.value = true;
     try {
       final fetchedCrops = await FarmerService().getAllCrops();
-      crops.assignAll(
-        fetchedCrops.map((data) {
+      final cropsList = await Future.wait(
+        fetchedCrops.map((data) async {
           final seller = data['seller'] ?? {};
           final photos = data['photos'] as List? ?? [];
           List<String> imageUrls = [];
@@ -57,18 +95,28 @@ class CropListController extends GetxController {
                 .toList();
           }
 
+          String cropName = data['crop_name'] ?? translate('unknown_crop');
+          cropName = await _translateIfNeed(cropName);
+
+          String farmerName = seller['name'] ?? translate('unknown_farmer');
+          farmerName = await _translateIfNeed(farmerName);
+
           return CropModel(
-            name: data['crop_name'] ?? 'Unknown',
+            name: cropName,
             quantity: double.tryParse(data['quantity'].toString()) ?? 0.0,
             unit: data['unit'] ?? '',
             price: double.tryParse(data['price_per_unit'].toString()) ?? 0.0,
-            farmerName: seller['name'] ?? 'Unknown Farmer',
-            location: 'Unknown Location', // Location not in API response yet
-            phone: seller['phone'] ?? 'N/A',
+            farmerName: farmerName,
+            location: translate(
+              'unknown_location',
+            ), // Location not in API response yet
+            phone: seller['phone'] ?? translate('not_available'),
             imageUrls: imageUrls,
           );
-        }).toList(),
+        }),
       );
+
+      crops.assignAll(cropsList);
     } catch (e) {
       print('Error fetching crops: $e');
     } finally {
@@ -102,7 +150,7 @@ class CropListController extends GetxController {
                 Icon(Icons.phone, color: Color(0xFF2E8B57), size: 48),
                 SizedBox(height: 16),
                 Text(
-                  'Contact Information',
+                  translate('contact_info_title'),
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
@@ -144,7 +192,7 @@ class CropListController extends GetxController {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text('Close'),
+                  child: Text(translate('close')),
                 ),
               ],
             ),
@@ -189,7 +237,7 @@ class CropListWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Crop Marketplace',
+                        translate('crop_marketplace_title'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -197,7 +245,7 @@ class CropListWidget extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        'Browse crops from nearby farmers',
+                        translate('crop_marketplace_subtitle'),
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.9),
                           fontSize: 13,
@@ -229,7 +277,7 @@ class CropListWidget extends StatelessWidget {
                       ),
                       SizedBox(height: 16),
                       Text(
-                        'No crops available',
+                        translate('no_crops_available'),
                         style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
                     ],
@@ -354,10 +402,10 @@ class CropListWidget extends StatelessWidget {
                           color: Color(0xFF2E8B57),
                         ),
                         Text(
-                          '${crop.price}/${crop.unit}',
+                          '₹${crop.price} ${translate('per')} ${controller._getTranslatedUnit(crop.unit)}',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.bold,
                             color: Color(0xFF2E8B57),
                           ),
                         ),
@@ -510,22 +558,27 @@ class CropDetailDialog extends StatelessWidget {
 
                     _buildDetailRow(
                       Icons.scale,
-                      'Quantity',
-                      '${crop.quantity} ${crop.unit}',
+                      translate('quantity_label'),
+                      '${crop.quantity} ${controller._getTranslatedUnit(crop.unit)}',
                     ),
-                    SizedBox(height: 12),
+                    SizedBox(height: 16),
                     _buildDetailRow(
                       Icons.currency_rupee,
-                      'Price',
-                      '₹${crop.price} per ${crop.unit}',
+                      translate('price_label'),
+                      '₹${crop.price} ${translate('per')} ${controller._getTranslatedUnit(crop.unit)}',
+
                       valueColor: Color(0xFF2E8B57),
                     ),
                     SizedBox(height: 12),
-                    _buildDetailRow(Icons.person, 'Farmer', crop.farmerName),
+                    _buildDetailRow(
+                      Icons.person,
+                      translate('farmer_label'),
+                      crop.farmerName,
+                    ),
                     SizedBox(height: 12),
                     _buildDetailRow(
                       Icons.location_on,
-                      'Location',
+                      translate('location_label'),
                       crop.location,
                     ),
                     SizedBox(height: 24),
@@ -546,8 +599,8 @@ class CropDetailDialog extends StatelessWidget {
                         label: Obx(
                           () => Text(
                             controller.hasSubscription.value
-                                ? 'Get Contact Info'
-                                : 'Get Contact Info (Premium)',
+                                ? translate('get_contact_info')
+                                : translate('get_contact_info_premium'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,

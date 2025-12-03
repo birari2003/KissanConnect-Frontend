@@ -1,4 +1,4 @@
-# kissan_connect
+# Smart Shetkari
 
 A new Flutter project.
 

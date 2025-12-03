@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
-import 'package:kissan_connect/app/services/farmerServices.dart';
+import 'package:smart_shetkari/app/services/farmerServices.dart';
 import 'dart:io';
 import '../utils/ui_utils.dart';
 import '../services/adminServices.dart';

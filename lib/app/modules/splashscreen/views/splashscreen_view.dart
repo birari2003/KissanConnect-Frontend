@@ -280,7 +280,7 @@ class _SplashScreenViewState extends State<SplashScreenView>
                                   ).createShader(bounds);
                                 },
                                 child: const Text(
-                                  'Smart Shetkaरी',
+                                  'Smart Shetkari',
                                   style: TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,

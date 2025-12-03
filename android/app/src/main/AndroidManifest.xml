@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <uses-permission android:name="android.permission.FILE_PICKER"/>
     <application
-        android:label="kissan_connect"
+        android:label="Smart Shetkari"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

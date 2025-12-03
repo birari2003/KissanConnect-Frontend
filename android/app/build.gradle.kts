@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.somayuinfotech.kissanconnect.kissan_connect"
+    namespace = "com.somayuinfotech.kissanconnect.smart_shetkari"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.somayuinfotech.kissanconnect.kissan_connect"
+        applicationId = "com.somayuinfotech.kissanconnect.smart_shetkari"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

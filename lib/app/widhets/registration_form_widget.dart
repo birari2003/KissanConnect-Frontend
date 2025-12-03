@@ -444,6 +444,14 @@ class _RegistrationFormState extends State<RegistrationForm>
   Future<void> _fetchStates() async {
     try {
       final data = await _adminService.getStates();
+
+      // Translate state names
+      for (var state in data) {
+        if (state['name'] != null) {
+          state['name'] = await _translateIfNeed(state['name']);
+        }
+      }
+
       if (mounted) {
         setState(() {
           states = data;
@@ -558,6 +566,14 @@ class _RegistrationFormState extends State<RegistrationForm>
 
     try {
       final data = await _adminService.getDistrictsByState(stateId);
+
+      // Translate district names
+      for (var district in data) {
+        if (district['name'] != null) {
+          district['name'] = await _translateIfNeed(district['name']);
+        }
+      }
+
       if (mounted) {
         setState(() {
           districts = data;
@@ -586,6 +602,22 @@ class _RegistrationFormState extends State<RegistrationForm>
 
     try {
       final data = await _adminService.getTalukasByDistrict(districtId);
+
+      // Translate taluka names
+      for (var taluka in data) {
+        if (taluka['name'] != null) {
+          taluka['name'] = await _translateIfNeed(taluka['name']);
+        }
+        // Also translate village names within taluka
+        if (taluka['villages'] != null) {
+          for (var village in taluka['villages']) {
+            if (village['name'] != null) {
+              village['name'] = await _translateIfNeed(village['name']);
+            }
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           talukas = data;

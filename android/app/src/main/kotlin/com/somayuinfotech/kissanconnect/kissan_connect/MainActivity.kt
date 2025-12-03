@@ -1,4 +1,4 @@
-package com.somayuinfotech.kissanconnect.kissan_connect
+package com.somayuinfotech.kissanconnect.smart_shetkari
 
 import io.flutter.embedding.android.FlutterActivity
 

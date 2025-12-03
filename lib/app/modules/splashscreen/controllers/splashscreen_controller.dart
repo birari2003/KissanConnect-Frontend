@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kissan_connect/app/routes/app_pages.dart';
+import 'package:smart_shetkari/app/routes/app_pages.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'dart:ui';
 

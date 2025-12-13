@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:ui';
+import 'dart:convert';
 import '../widhets/subscriptionPopUp.dart';
+import '../widhets/complaint_popup.dart';
 
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
+import '../controllers/subscription_controller.dart';
+import '../controllers/payment_controller.dart';
 
 // Crop Model
 class CropModel {
+  final int cropId;
   final String name;
   final double quantity;
   final String unit;
@@ -16,8 +24,10 @@ class CropModel {
   final String location;
   final String phone;
   final List<String> imageUrls;
+  final int sellerId; // Added to filter own crops
 
   CropModel({
+    required this.cropId,
     required this.name,
     required this.quantity,
     required this.unit,
@@ -26,6 +36,7 @@ class CropModel {
     required this.location,
     required this.phone,
     required this.imageUrls,
+    required this.sellerId,
   });
 }
 
@@ -34,6 +45,12 @@ class CropListController extends GetxController {
   final crops = <CropModel>[].obs;
   final isLoading = false.obs;
   final TranslationService _translationService = TranslationService();
+  final SubscriptionController _subscriptionController = Get.put(
+    SubscriptionController(),
+  );
+
+  // Expose hasSubscription from the controller
+  RxBool get hasSubscription => _subscriptionController.isSubscribed;
 
   Future<String> _translateIfNeed(String text) async {
     try {
@@ -73,14 +90,33 @@ class CropListController extends GetxController {
   void onInit() {
     super.onInit();
     fetchCrops();
+    // Ensure subscription status is checked
+    _subscriptionController.checkSubscriptionStatus();
   }
 
   Future<void> fetchCrops() async {
     isLoading.value = true;
     try {
+      // Get current user ID
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString('user_data');
+      int? currentUserId;
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        currentUserId = userData['id'];
+      }
+
       final fetchedCrops = await FarmerService().getAllCrops();
+
+      // Filter out own crops
+      final filteredCrops = fetchedCrops.where((data) {
+        final seller = data['seller'] ?? {};
+        final sellerId = seller['id'];
+        return sellerId != currentUserId; // Exclude own crops
+      }).toList();
+
       final cropsList = await Future.wait(
-        fetchedCrops.map((data) async {
+        filteredCrops.map((data) async {
           final seller = data['seller'] ?? {};
           final photos = data['photos'] as List? ?? [];
           List<String> imageUrls = [];
@@ -102,6 +138,9 @@ class CropListController extends GetxController {
           farmerName = await _translateIfNeed(farmerName);
 
           return CropModel(
+            cropId: (data['id'] is int)
+                ? data['id']
+                : (int.tryParse(data['id'].toString()) ?? 0),
             name: cropName,
             quantity: double.tryParse(data['quantity'].toString()) ?? 0.0,
             unit: data['unit'] ?? '',
@@ -112,6 +151,9 @@ class CropListController extends GetxController {
             ), // Location not in API response yet
             phone: seller['phone'] ?? translate('not_available'),
             imageUrls: imageUrls,
+            sellerId: (seller['id'] is int)
+                ? seller['id']
+                : (int.tryParse(seller['id']?.toString() ?? '0') ?? 0),
           );
         }),
       );
@@ -124,9 +166,6 @@ class CropListController extends GetxController {
     }
   }
 
-  // Check if user has subscription (mock for now)
-  final hasSubscription = false.obs;
-
   void showCropDetail(CropModel crop) {
     Get.dialog(
       CropDetailDialog(crop: crop, controller: this),
@@ -134,8 +173,24 @@ class CropListController extends GetxController {
     );
   }
 
-  void showContactInfo(CropModel crop) {
+  void showContactInfo(CropModel crop) async {
     if (hasSubscription.value) {
+      // Save farmer history to database
+      try {
+        await FarmerService().addFarmerHistory(
+          cropSellId: crop.cropId,
+          cropOwnerUserId: crop.sellerId,
+          cropName: crop.name,
+          cropImagePath: crop.imageUrls.isNotEmpty
+              ? crop.imageUrls.first
+              : null,
+        );
+        print('Farmer history saved successfully');
+      } catch (e) {
+        print('Error saving farmer history: $e');
+        // Continue to show contact info even if history saving fails
+      }
+
       // Show contact info
       Get.dialog(
         Dialog(
@@ -176,6 +231,36 @@ class CropListController extends GetxController {
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF2E8B57),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      InkWell(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: crop.phone));
+                          Get.snackbar(
+                            translate('copied'),
+                            translate('phone_copied_message'),
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Color(0xFF2E8B57),
+                            colorText: Colors.white,
+                            duration: Duration(seconds: 2),
+                            margin: EdgeInsets.all(16),
+                            borderRadius: 8,
+                            icon: Icon(Icons.check_circle, color: Colors.white),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF2E8B57).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.copy,
+                            size: 20,
+                            color: Color(0xFF2E8B57),
+                          ),
                         ),
                       ),
                     ],
@@ -285,17 +370,41 @@ class CropListWidget extends StatelessWidget {
                 );
               }
 
-              return GridView.builder(
+              return ListView.separated(
                 padding: EdgeInsets.all(16),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.75,
-                ),
-                itemCount: controller.crops.length,
+                itemCount:
+                    !controller.hasSubscription.value &&
+                        controller.crops.length > 3
+                    ? controller.crops.length +
+                          1 // Add 1 for subscribe card
+                    : controller.crops.length,
+                separatorBuilder: (context, index) => SizedBox(height: 16),
                 itemBuilder: (context, index) {
-                  final crop = controller.crops[index];
+                  // If unsubscribed and this is position after 3rd crop, show subscribe card
+                  if (!controller.hasSubscription.value &&
+                      index == 3 &&
+                      controller.crops.length > 3) {
+                    return _buildSubscribeCard(controller);
+                  }
+
+                  // Adjust index if we've inserted subscribe card
+                  final cropIndex =
+                      !controller.hasSubscription.value &&
+                          controller.crops.length > 3 &&
+                          index > 3
+                      ? index - 1
+                      : index;
+
+                  if (cropIndex >= controller.crops.length)
+                    return SizedBox.shrink();
+
+                  final crop = controller.crops[cropIndex];
+                  final isBlurred =
+                      !controller.hasSubscription.value && cropIndex >= 3;
+
+                  if (isBlurred) {
+                    return _buildSimpleBlurredCropCard(crop, controller);
+                  }
                   return _buildCropCard(crop, controller);
                 },
               );
@@ -315,48 +424,53 @@ class CropListWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
             // Crop Image
-            // Crop Image Carousel
             ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: BorderRadius.horizontal(left: Radius.circular(16)),
               child: SizedBox(
-                height: 110,
+                width: 120,
+                height: 120,
                 child: crop.imageUrls.isNotEmpty
-                    ? PageView.builder(
-                        itemCount: crop.imageUrls.length,
-                        itemBuilder: (context, imageIndex) {
-                          return Image.network(
-                            crop.imageUrls[imageIndex],
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[300],
-                                child: Icon(
-                                  Icons.image,
-                                  size: 40,
-                                  color: Colors.grey[500],
-                                ),
-                              );
-                            },
+                    ? Image.network(
+                        crop.imageUrls.first,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.grass,
+                              size: 50,
+                              color: Color(0xFF7BB53B),
+                            ),
                           );
                         },
                       )
                     : Container(
-                        color: Colors.grey[300],
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                          ),
+                        ),
                         child: Icon(
-                          Icons.image,
-                          size: 40,
-                          color: Colors.grey[500],
+                          Icons.grass,
+                          size: 50,
+                          color: Color(0xFF7BB53B),
                         ),
                       ),
               ),
@@ -369,25 +483,60 @@ class CropListWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      crop.name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D323A),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            crop.name,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D323A),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (crop.imageUrls.length > 1)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.photo_library,
+                                  size: 12,
+                                  color: Colors.grey[600],
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  '${crop.imageUrls.length}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
-                    SizedBox(height: 4),
+                    SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.scale, size: 14, color: Colors.grey[600]),
+                        Icon(Icons.scale, size: 16, color: Colors.grey[600]),
                         SizedBox(width: 4),
                         Text(
                           '${crop.quantity} ${crop.unit}',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             color: Colors.grey[700],
                           ),
                         ),
@@ -398,29 +547,29 @@ class CropListWidget extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.currency_rupee,
-                          size: 14,
+                          size: 16,
                           color: Color(0xFF2E8B57),
                         ),
                         Text(
                           '₹${crop.price} ${translate('per')} ${controller._getTranslatedUnit(crop.unit)}',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF2E8B57),
                           ),
                         ),
                       ],
                     ),
-                    Spacer(),
+                    SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.person, size: 12, color: Colors.grey[500]),
+                        Icon(Icons.person, size: 14, color: Colors.grey[500]),
                         SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             crop.farmerName,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: Colors.grey[600],
                             ),
                             maxLines: 1,
@@ -438,9 +587,82 @@ class CropListWidget extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildSubscribeCard(CropListController controller) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF2E8B57), Color(0xFF5CC96F)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF2E8B57).withOpacity(0.3),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.lock, color: Colors.white, size: 40),
+          SizedBox(height: 16),
+          Text(
+            translate('subscribe_to_see_more'),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 8),
+          Text(
+            translate('free_limit_reached'),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () async {
+              final paymentController = Get.put(PaymentController());
+              await paymentController.startPayment();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Color(0xFF2E8B57),
+              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              translate('subscribe_now'),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSimpleBlurredCropCard(
+    CropModel crop,
+    CropListController controller,
+  ) {
+    return Opacity(
+      opacity: 0.4,
+      child: IgnorePointer(child: _buildCropCard(crop, controller)),
+    );
+  }
 }
 
-class CropDetailDialog extends StatelessWidget {
+class CropDetailDialog extends StatefulWidget {
   final CropModel crop;
   final CropListController controller;
 
@@ -449,6 +671,13 @@ class CropDetailDialog extends StatelessWidget {
     required this.crop,
     required this.controller,
   });
+
+  @override
+  State<CropDetailDialog> createState() => _CropDetailDialogState();
+}
+
+class _CropDetailDialogState extends State<CropDetailDialog> {
+  int _currentImageIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -460,57 +689,69 @@ class CropDetailDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Crop Image
-            // Crop Image Carousel
             ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               child: SizedBox(
                 height: 250,
-                child: crop.imageUrls.isNotEmpty
+                child: widget.crop.imageUrls.isNotEmpty
                     ? Stack(
                         children: [
                           PageView.builder(
-                            itemCount: crop.imageUrls.length,
+                            itemCount: widget.crop.imageUrls.length,
+                            onPageChanged: (index) {
+                              setState(() {
+                                _currentImageIndex = index;
+                              });
+                            },
                             itemBuilder: (context, index) {
                               return Image.network(
-                                crop.imageUrls[index],
+                                widget.crop.imageUrls[index],
                                 width: double.infinity,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
-                                    color: Colors.grey[300],
-                                    child: Icon(
-                                      Icons.image,
-                                      size: 60,
-                                      color: Colors.grey[500],
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFFE8F5E9),
+                                          Color(0xFFC8E6C9),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.grass,
+                                        size: 80,
+                                        color: Color(0xFF7BB53B),
+                                      ),
                                     ),
                                   );
                                 },
                               );
                             },
                           ),
-                          if (crop.imageUrls.length > 1)
+                          // Image Counter Indicator
+                          if (widget.crop.imageUrls.length > 1)
                             Positioned(
-                              bottom: 10,
-                              left: 0,
-                              right: 0,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(
-                                  crop.imageUrls.length,
-                                  (index) => Container(
-                                    margin: EdgeInsets.symmetric(horizontal: 4),
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withOpacity(0.8),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black26,
-                                          blurRadius: 2,
-                                        ),
-                                      ],
-                                    ),
+                              bottom: 16,
+                              right: 16,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  '${_currentImageIndex + 1}/${widget.crop.imageUrls.length}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
@@ -518,11 +759,19 @@ class CropDetailDialog extends StatelessWidget {
                         ],
                       )
                     : Container(
-                        color: Colors.grey[300],
-                        child: Icon(
-                          Icons.image,
-                          size: 60,
-                          color: Colors.grey[500],
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.grass,
+                            size: 80,
+                            color: Color(0xFF7BB53B),
+                          ),
                         ),
                       ),
               ),
@@ -540,7 +789,7 @@ class CropDetailDialog extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            crop.name,
+                            widget.crop.name,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -559,13 +808,13 @@ class CropDetailDialog extends StatelessWidget {
                     _buildDetailRow(
                       Icons.scale,
                       translate('quantity_label'),
-                      '${crop.quantity} ${controller._getTranslatedUnit(crop.unit)}',
+                      '${widget.crop.quantity} ${widget.controller._getTranslatedUnit(widget.crop.unit)}',
                     ),
                     SizedBox(height: 16),
                     _buildDetailRow(
                       Icons.currency_rupee,
                       translate('price_label'),
-                      '₹${crop.price} ${translate('per')} ${controller._getTranslatedUnit(crop.unit)}',
+                      '₹${widget.crop.price} ${translate('per')} ${widget.controller._getTranslatedUnit(widget.crop.unit)}',
 
                       valueColor: Color(0xFF2E8B57),
                     ),
@@ -573,13 +822,13 @@ class CropDetailDialog extends StatelessWidget {
                     _buildDetailRow(
                       Icons.person,
                       translate('farmer_label'),
-                      crop.farmerName,
+                      widget.crop.farmerName,
                     ),
                     SizedBox(height: 12),
                     _buildDetailRow(
                       Icons.location_on,
                       translate('location_label'),
-                      crop.location,
+                      widget.crop.location,
                     ),
                     SizedBox(height: 24),
 
@@ -587,10 +836,11 @@ class CropDetailDialog extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () => controller.showContactInfo(crop),
+                        onPressed: () =>
+                            widget.controller.showContactInfo(widget.crop),
                         icon: Obx(
                           () => Icon(
-                            controller.hasSubscription.value
+                            widget.controller.hasSubscription.value
                                 ? Icons.phone
                                 : Icons.lock,
                             size: 20,
@@ -598,8 +848,10 @@ class CropDetailDialog extends StatelessWidget {
                         ),
                         label: Obx(
                           () => Text(
-                            controller.hasSubscription.value
-                                ? translate('get_contact_info')
+                            widget.controller.hasSubscription.value
+                                ? translate(
+                                    'see_contact',
+                                  ) // Changed key or text
                                 : translate('get_contact_info_premium'),
                             style: TextStyle(
                               fontSize: 16,
@@ -609,6 +861,42 @@ class CropDetailDialog extends StatelessWidget {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF2E8B57),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 12),
+
+                    // Complaint Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Get.dialog(
+                            CropComplaintPopup(
+                              cropId: widget.crop.cropId,
+                              sellerId: widget.crop.sellerId,
+                              cropName: widget.crop.name,
+                            ),
+                            barrierDismissible: true,
+                          );
+                        },
+                        icon: Icon(Icons.report_problem, size: 20),
+                        label: Text(
+                          translate('file_complaint'),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[700],
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(

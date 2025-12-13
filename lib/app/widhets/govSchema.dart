@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:ui';
 import '../utils/ui_utils.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
+import '../controllers/subscription_controller.dart';
+import '../controllers/payment_controller.dart';
 
 class GovSchemaController extends GetxController {
   final schemes = <dynamic>[].obs;
   final isLoading = false.obs;
   final TranslationService _translationService = TranslationService();
+  final SubscriptionController _subscriptionController = Get.put(
+    SubscriptionController(),
+  );
+
+  RxBool get hasSubscription => _subscriptionController.isSubscribed;
 
   Future<String> _translateIfNeed(String text) async {
     try {
@@ -41,6 +49,13 @@ class GovSchemaController extends GetxController {
     try {
       final fetchedSchemes = await FarmerService().getGovernmentSchemes();
 
+      // Clear existing schemes to prepare for progressive loading
+      schemes.clear();
+
+      // Stop loading indicator so items can appear progressively
+      isLoading.value = false;
+
+      // Translate and add schemes progressively
       for (var scheme in fetchedSchemes) {
         if (scheme['title'] != null) {
           scheme['title'] = await _translateIfNeed(scheme['title']);
@@ -48,12 +63,12 @@ class GovSchemaController extends GetxController {
         if (scheme['description'] != null) {
           scheme['description'] = await _translateIfNeed(scheme['description']);
         }
-      }
 
-      schemes.assignAll(fetchedSchemes);
+        // Add scheme to UI immediately after translation
+        schemes.add(scheme);
+      }
     } catch (e) {
       print('Error fetching schemes: $e');
-    } finally {
       isLoading.value = false;
     }
   }
@@ -112,6 +127,11 @@ class GovSchema extends StatelessWidget {
           itemCount: controller.schemes.length,
           itemBuilder: (context, index) {
             final scheme = controller.schemes[index];
+            final isBlurred = !controller.hasSubscription.value && index >= 3;
+
+            if (isBlurred) {
+              return _buildBlurredSchemeCard(scheme, controller);
+            }
             return _buildSchemeCard(scheme, controller);
           },
         );
@@ -242,6 +262,98 @@ class GovSchema extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBlurredSchemeCard(
+    Map<String, dynamic> scheme,
+    GovSchemaController controller,
+  ) {
+    return Stack(
+      children: [
+        Opacity(opacity: 0.3, child: _buildSchemeCard(scheme, controller)),
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF2A6E9B), Color(0xFF54B5D9)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFF2A6E9B).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock, color: Colors.white, size: 18),
+                        SizedBox(height: 6),
+                        Text(
+                          translate('subscribe_to_see_more'),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          translate('free_limit_reached'),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 11,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final paymentController = Get.put(
+                              PaymentController(),
+                            );
+                            await paymentController.startPayment();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Color(0xFF2A6E9B),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 9,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            translate('subscribe_now'),
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

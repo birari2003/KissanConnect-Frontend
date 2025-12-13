@@ -3,10 +3,13 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:smart_shetkari/app/controllers/payment_controller.dart';
 import '../utils/ui_utils.dart';
 
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
+import '../controllers/subscription_controller.dart';
+import 'subscriptionPopUp.dart';
 
 class CropClaimController extends GetxController {
   final cropNameController = TextEditingController();
@@ -87,6 +90,13 @@ class CropClaimController extends GetxController {
   }
 
   Future<void> submitClaim() async {
+    // Check subscription status and claim limit for unsubscribed users
+    final subscriptionController = Get.put(SubscriptionController());
+    if (!subscriptionController.isSubscribed.value && myClaims.length >= 3) {
+      _showLimitExceededPopup();
+      return;
+    }
+
     final cropName = cropNameController.text.trim();
     final message = messageController.text.trim();
 
@@ -144,6 +154,180 @@ class CropClaimController extends GetxController {
     } finally {
       isSending.value = false;
     }
+  }
+
+  void _showLimitExceededPopup() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF7BB53B).withOpacity(0.1),
+                Color(0xFF54B5D9).withOpacity(0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Premium Icon
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF7BB53B), Color(0xFF54B5D9)],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0xFF7BB53B).withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.workspace_premium,
+                  size: 48,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: 24),
+
+              // Title
+              Text(
+                translate('claim_limit_exceeded_title'),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2A6E9B),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+
+              // Message
+              Text(
+                translate('claim_limit_exceeded_message'),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[700],
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24),
+
+              // Premium Features
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Color(0xFF7BB53B).withOpacity(0.3)),
+                ),
+                child: Column(
+                  children: [
+                    _buildFeatureRow(
+                      Icons.check_circle,
+                      translate('unlimited_claims'),
+                    ),
+                    SizedBox(height: 8),
+                    _buildFeatureRow(
+                      Icons.contact_phone,
+                      translate('view_all_contacts'),
+                    ),
+                    SizedBox(height: 8),
+                    _buildFeatureRow(
+                      Icons.support_agent,
+                      translate('priority_support'),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 24),
+
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Color(0xFF7BB53B),
+                        side: BorderSide(color: Color(0xFF7BB53B)),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        translate('maybe_later_button'),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final paymentController = Get.put(PaymentController());
+                        await paymentController.startPayment();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF7BB53B),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        translate('subscribe_now'),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
+  }
+
+  Widget _buildFeatureRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: Color(0xFF7BB53B), size: 20),
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF2A6E9B),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> fetchClaims() async {

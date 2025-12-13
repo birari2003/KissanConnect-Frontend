@@ -6,6 +6,8 @@ import '../modules/farmerscreendashboard/bindings/farmerscreendashboard_binding.
 import '../modules/farmerscreendashboard/views/farmerscreendashboard_view.dart';
 import '../modules/farmerslist/bindings/farmerslist_binding.dart';
 import '../modules/farmerslist/views/farmerslist_view.dart';
+import '../modules/history/bindings/history_binding.dart';
+import '../modules/history/views/history_view.dart';
 import '../modules/loginsignup/bindings/loginsignup_binding.dart';
 import '../modules/loginsignup/views/loginsignup_view.dart';
 import '../modules/paymentgetway/bindings/paymentgetway_binding.dart';
@@ -71,6 +73,11 @@ class AppPages {
       name: _Paths.PAYMENTGETWAY,
       page: () => const PaymentgetwayView(),
       binding: PaymentgetwayBinding(),
+    ),
+    GetPage(
+      name: _Paths.HISTORY,
+      page: () => const HistoryView(),
+      binding: HistoryBinding(),
     ),
   ];
 }

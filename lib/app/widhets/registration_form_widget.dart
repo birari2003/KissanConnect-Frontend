@@ -445,17 +445,25 @@ class _RegistrationFormState extends State<RegistrationForm>
     try {
       final data = await _adminService.getStates();
 
-      // Translate state names
+      // Clear states first
+      if (mounted) {
+        setState(() {
+          states = [];
+        });
+      }
+
+      // Translate and render state names progressively
       for (var state in data) {
         if (state['name'] != null) {
           state['name'] = await _translateIfNeed(state['name']);
         }
-      }
 
-      if (mounted) {
-        setState(() {
-          states = data;
-        });
+        // Immediately add to UI after translating this single state
+        if (mounted) {
+          setState(() {
+            states = List.from(states)..add(state);
+          });
+        }
       }
     } catch (e) {
       print('Error fetching states: $e');
@@ -559,7 +567,7 @@ class _RegistrationFormState extends State<RegistrationForm>
       selectedTalukaName = null;
       selectedVillageId = null;
       selectedVillageName = null;
-      districts = [];
+      districts = []; // Clear immediately
       talukas = [];
       villages = [];
     });
@@ -567,17 +575,19 @@ class _RegistrationFormState extends State<RegistrationForm>
     try {
       final data = await _adminService.getDistrictsByState(stateId);
 
-      // Translate district names
+      // Translate and render districts progressively
       for (var district in data) {
         if (district['name'] != null) {
+          // Translate this district
           district['name'] = await _translateIfNeed(district['name']);
         }
-      }
 
-      if (mounted) {
-        setState(() {
-          districts = data;
-        });
+        // Immediately add to UI after translating this single district
+        if (mounted) {
+          setState(() {
+            districts = List.from(districts)..add(district);
+          });
+        }
       }
     } catch (e) {
       print('Error fetching districts: $e');
@@ -596,19 +606,21 @@ class _RegistrationFormState extends State<RegistrationForm>
       selectedTalukaName = null;
       selectedVillageId = null;
       selectedVillageName = null;
-      talukas = [];
+      talukas = []; // Clear immediately
       villages = [];
     });
 
     try {
       final data = await _adminService.getTalukasByDistrict(districtId);
 
-      // Translate taluka names
+      // Translate and render talukas progressively
       for (var taluka in data) {
         if (taluka['name'] != null) {
+          // Translate taluka name
           taluka['name'] = await _translateIfNeed(taluka['name']);
         }
-        // Also translate village names within taluka
+
+        // Also translate village names within taluka progressively
         if (taluka['villages'] != null) {
           for (var village in taluka['villages']) {
             if (village['name'] != null) {
@@ -616,12 +628,13 @@ class _RegistrationFormState extends State<RegistrationForm>
             }
           }
         }
-      }
 
-      if (mounted) {
-        setState(() {
-          talukas = data;
-        });
+        // Immediately add to UI after translating this single taluka
+        if (mounted) {
+          setState(() {
+            talukas = List.from(talukas)..add(taluka);
+          });
+        }
       }
     } catch (e) {
       print('Error fetching talukas: $e');
@@ -818,15 +831,12 @@ class _RegistrationFormState extends State<RegistrationForm>
       talukaError = selectedTalukaId == null
           ? translate('requiredField')
           : null;
-      villageError = selectedVillageId == null
-          ? translate('requiredField')
-          : null;
+      // Village is optional
+      villageError = null;
 
       hasDropdownErrors =
-          stateError != null ||
-          districtError != null ||
-          talukaError != null ||
-          villageError != null;
+          stateError != null || districtError != null || talukaError != null;
+      // villageError removed - village is optional
     });
 
     if (hasDropdownErrors) {
@@ -999,25 +1009,25 @@ class _RegistrationFormState extends State<RegistrationForm>
   }
 
   // --- UI Builder Widgets ---
-  Widget _buildSectionTitle(String title, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 16),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildSectionTitle(String title, IconData icon, Color color) {
+  //   return Padding(
+  //     padding: const EdgeInsets.only(top: 24, bottom: 16),
+  //     child: Row(
+  //       children: [
+  //         Icon(icon, color: color, size: 24),
+  //         const SizedBox(width: 12),
+  //         Text(
+  //           title,
+  //           style: TextStyle(
+  //             fontSize: 18,
+  //             fontWeight: FontWeight.bold,
+  //             color: color,
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildTextFormField(
     String label,
@@ -1283,62 +1293,62 @@ class _RegistrationFormState extends State<RegistrationForm>
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
-              SliverAppBar(
-                expandedHeight: 120,
-                floating: false,
-                pinned: true,
-                backgroundColor: const Color(0xFF2E8B57),
-                flexibleSpace: FlexibleSpaceBar(
-                  title: Text(
-                    translate('title'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: Colors.white,
-                    ),
-                  ),
-                  background: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF2E8B57),
-                          const Color(0xFF5CC96F),
-                        ],
-                      ),
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          right: -30,
-                          top: -30,
-                          child: Container(
-                            width: 150,
-                            height: 150,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.1),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: -50,
-                          bottom: -50,
-                          child: Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.05),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              // SliverAppBar(
+              //   expandedHeight: 120,
+              //   floating: false,
+              //   pinned: true,
+              //   backgroundColor: const Color(0xFF2E8B57),
+              //   flexibleSpace: FlexibleSpaceBar(
+              //     title: Text(
+              //       translate('title'),
+              //       style: const TextStyle(
+              //         fontWeight: FontWeight.bold,
+              //         fontSize: 20,
+              //         color: Colors.white,
+              //       ),
+              //     ),
+              //     background: Container(
+              //       decoration: BoxDecoration(
+              //         gradient: LinearGradient(
+              //           begin: Alignment.topLeft,
+              //           end: Alignment.bottomRight,
+              //           colors: [
+              //             const Color(0xFF2E8B57),
+              //             const Color(0xFF5CC96F),
+              //           ],
+              //         ),
+              //       ),
+              //       child: Stack(
+              //         children: [
+              //           Positioned(
+              //             right: -30,
+              //             top: -30,
+              //             child: Container(
+              //               width: 150,
+              //               height: 150,
+              //               decoration: BoxDecoration(
+              //                 shape: BoxShape.circle,
+              //                 color: Colors.white.withOpacity(0.1),
+              //               ),
+              //             ),
+              //           ),
+              //           Positioned(
+              //             left: -50,
+              //             bottom: -50,
+              //             child: Container(
+              //               width: 200,
+              //               height: 200,
+              //               decoration: BoxDecoration(
+              //                 shape: BoxShape.circle,
+              //                 color: Colors.white.withOpacity(0.05),
+              //               ),
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ),
+              //   ),
+              // ),
               SliverToBoxAdapter(
                 child: FadeTransition(
                   opacity: _fadeAnimation,
@@ -1350,11 +1360,11 @@ class _RegistrationFormState extends State<RegistrationForm>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // --- Personal Information ---
-                          _buildSectionTitle(
-                            translate('personalInfo'),
-                            Icons.person,
-                            Colors.blue.shade700,
-                          ),
+                          // _buildSectionTitle(
+                          //   translate('personalInfo'),
+                          //   Icons.person,
+                          //   Colors.blue.shade700,
+                          // ),
                           _buildTextFormField(
                             translate('farmerName'),
                             _farmerNameController,
@@ -1595,11 +1605,11 @@ class _RegistrationFormState extends State<RegistrationForm>
                             ],
                           ),
                           // --- Farm Information ---
-                          _buildSectionTitle(
-                            translate('farmInfo'),
-                            Icons.eco,
-                            Colors.green.shade800,
-                          ),
+                          // _buildSectionTitle(
+                          //   translate('farmInfo'),
+                          //   Icons.eco,
+                          //   Colors.green.shade800,
+                          // ),
                           _buildTextFormField(
                             translate('landArea'),
                             _landAreaController,
@@ -1623,11 +1633,11 @@ class _RegistrationFormState extends State<RegistrationForm>
                             selectedIrrigationSources,
                           ),
                           // --- Farming Details ---
-                          _buildSectionTitle(
-                            translate('farmingDetails'),
-                            Icons.agriculture,
-                            Colors.orange.shade800,
-                          ),
+                          // _buildSectionTitle(
+                          //   translate('farmingDetails'),
+                          //   Icons.agriculture,
+                          //   Colors.orange.shade800,
+                          // ),
                           _buildMultiSelect(
                             translate('cropsGrown'),
                             translate(
@@ -1652,11 +1662,11 @@ class _RegistrationFormState extends State<RegistrationForm>
                             maxLines: 3,
                           ),
                           // --- Other Information ---
-                          _buildSectionTitle(
-                            translate('otherInfo'),
-                            Icons.info,
-                            Colors.purple.shade700,
-                          ),
+                          // _buildSectionTitle(
+                          //   translate('otherInfo'),
+                          //   Icons.info,
+                          //   Colors.purple.shade700,
+                          // ),
                           _buildTextFormField(
                             translate('occupation'),
                             _occupationController,

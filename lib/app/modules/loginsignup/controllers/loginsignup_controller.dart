@@ -39,6 +39,157 @@ class LoginsignupController extends GetxController {
   final RxString selectedRole = 'Farmer'.obs;
   final List<String> roles = ['Farmer', 'Super Admin', 'Admin'];
 
+  // Terms and Conditions acceptance
+  final RxBool acceptedTerms = false.obs;
+
+  void showTermsAndConditions() {
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.85,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Color(0xFF2E8B57),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    translate('terms_title'),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Get.back(),
+                  ),
+                ],
+              ),
+            ),
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      translate('terms_content_1'),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D323A),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      translate('terms_content_2'),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    ),
+                    SizedBox(height: 20),
+                    // Terms points
+                    ..._buildTermsPoints(),
+                  ],
+                ),
+              ),
+            ),
+            // Close button
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF2E8B57),
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    translate('close'),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+      isDismissible: true,
+    );
+  }
+
+  List<Widget> _buildTermsPoints() {
+    final points = [
+      {'title': 'terms_point_1', 'desc': 'terms_point_1_desc'},
+      {'title': 'terms_point_2', 'desc': 'terms_point_2_desc'},
+      {'title': 'terms_point_3', 'desc': 'terms_point_3_desc'},
+      {'title': 'terms_point_4', 'desc': 'terms_point_4_desc'},
+      {'title': 'terms_point_5', 'desc': 'terms_point_5_desc'},
+      {'title': 'terms_point_6', 'desc': 'terms_point_6_desc'},
+      {'title': 'terms_point_7', 'desc': 'terms_point_7_desc'},
+      {'title': 'terms_point_8', 'desc': 'terms_point_8_desc'},
+      {'title': 'terms_point_9', 'desc': 'terms_point_9_desc'},
+      {'title': 'terms_point_10', 'desc': 'terms_point_10_desc'},
+    ];
+
+    return points.map((point) {
+      return Padding(
+        padding: EdgeInsets.only(bottom: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              translate(point['title']!),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E8B57),
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              translate(point['desc']!),
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -149,6 +300,15 @@ class LoginsignupController extends GetxController {
 
   Future<void> signup() async {
     if (signupFormKey.currentState!.validate()) {
+      // Check if terms are accepted
+      if (!acceptedTerms.value) {
+        UiUtils.showErrorSnackbar(
+          translate('error'),
+          translate('must_accept_terms'),
+        );
+        return;
+      }
+
       isLoading.value = true;
 
       try {

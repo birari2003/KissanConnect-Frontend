@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/farmerscreendashboard_controller.dart';
+import '../../../controllers/subscription_controller.dart';
 import '../../../widhets/registration_form_widget.dart';
 import '../../../widhets/setting_widget.dart';
 import '../../../widhets/crop_claim.dart';
@@ -17,6 +18,10 @@ class FarmerscreendashboardView
 
   @override
   Widget build(BuildContext context) {
+    // Initialize SubscriptionController to check status on dashboard load
+    final subscriptionController = Get.put(SubscriptionController());
+    subscriptionController.checkSubscriptionStatus();
+
     print('DEBUG: --- Dashboard Build Start ---');
     print('DEBUG: Locale: ${LocalizedApp.of(context).delegate.currentLocale}');
     print('DEBUG: Key "app_title": ${translate('app_title')}');

@@ -9,6 +9,7 @@ import '../services/translation_service.dart';
 
 import '../utils/ui_utils.dart';
 import '../controllers/payment_controller.dart';
+import '../controllers/subscription_controller.dart';
 
 class SettingsWidget extends StatefulWidget {
   final String selectedLanguage;
@@ -212,7 +213,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
-              _buildAppBar(),
+              // _buildAppBar(),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -471,8 +472,147 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                 subtitle: translate('make_payment_subtitle'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () async {
-                  final paymentController = Get.put(PaymentController());
-                  await paymentController.startPayment();
+                  final subscriptionController = Get.put(
+                    SubscriptionController(),
+                  );
+                  await subscriptionController
+                      .checkSubscriptionStatus(); // Ensure fresh status
+
+                  if (subscriptionController.isSubscribed.value) {
+                    Get.dialog(
+                      Dialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF4CAF50).withOpacity(0.9),
+                                Color(0xFF2E7D32),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          padding: EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Success Icon with animation effect
+                              Container(
+                                padding: EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.white.withOpacity(0.3),
+                                      blurRadius: 20,
+                                      spreadRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.check_circle,
+                                  size: 64,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 24),
+
+                              // Title
+                              Text(
+                                translate('subscription_active_title'),
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: 12),
+
+                              // Message
+                              Text(
+                                translate(
+                                  'subscription_already_active_message',
+                                ),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white.withOpacity(0.95),
+                                  height: 1.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: 24),
+
+                              // Premium Features
+                              Container(
+                                padding: EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    _buildActiveFeatureRow(
+                                      Icons.check_circle_outline,
+                                      translate('unlimited_claims'),
+                                    ),
+                                    SizedBox(height: 12),
+                                    _buildActiveFeatureRow(
+                                      Icons.check_circle_outline,
+                                      translate('unlimited_listings'),
+                                    ),
+                                    SizedBox(height: 12),
+                                    _buildActiveFeatureRow(
+                                      Icons.check_circle_outline,
+                                      translate('view_all_contacts'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 28),
+
+                              // Close Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () => Get.back(),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Color(0xFF2E7D32),
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    translate('ok'),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      barrierDismissible: true,
+                    );
+                  } else {
+                    final paymentController = Get.put(PaymentController());
+                    await paymentController.startPayment();
+                  }
                 },
               ),
             ],
@@ -640,6 +780,25 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActiveFeatureRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white, size: 22),
+        SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

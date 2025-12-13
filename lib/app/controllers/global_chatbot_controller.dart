@@ -24,6 +24,7 @@ class GlobalChatbotController extends GetxController {
     '/otp-verification',
     '/forgot-password',
     '/initial-screen',
+    '/loginsignup',
   ];
 
   void checkVisibility(String? route) {

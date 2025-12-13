@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widhets/complaintRecived.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/adminpanel_controller.dart';
@@ -13,6 +14,8 @@ import '../../../widhets/government_schema.dart';
 import '../../../widhets/crop_claim.dart';
 import '../../../widhets/createJobApplication.dart';
 import '../../../widhets/global_chatbot_widget.dart';
+import '../../history/views/history_view.dart';
+import '../../history/controllers/history_controller.dart';
 
 class AdminpanelView extends GetView<AdminpanelController> {
   const AdminpanelView({super.key});
@@ -169,6 +172,18 @@ class AdminpanelView extends GetView<AdminpanelController> {
                       title: 'Create Job',
                       index: 8,
                       isSelected: controller.selectedIndex.value == 8,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.history,
+                      title: 'History',
+                      index: 9,
+                      isSelected: controller.selectedIndex.value == 9,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.report_problem_rounded,
+                      title: 'Complaints',
+                      index: 10,
+                      isSelected: controller.selectedIndex.value == 10,
                     ),
                     _buildNavItem(
                       icon: Icons.settings_rounded,
@@ -344,6 +359,21 @@ class AdminpanelView extends GetView<AdminpanelController> {
             Icons.work_outline,
             const CreateJobApplication(),
           );
+        case 9:
+          _ensureHistoryControllerInjected();
+          return _buildPageWithHeader(
+            context,
+            'Communication History',
+            Icons.history,
+            const HistoryView(),
+          );
+        case 10:
+          return _buildPageWithHeader(
+            context,
+            'Complaints Received',
+            Icons.report_problem_rounded,
+            const ComplaintReceived(),
+          );
         default:
           return _buildDashboard(context);
       }
@@ -359,6 +389,12 @@ class AdminpanelView extends GetView<AdminpanelController> {
   void _ensureSuperAdminListInjected() {
     if (!Get.isRegistered<SuperadminlistController>()) {
       Get.put(SuperadminlistController());
+    }
+  }
+
+  void _ensureHistoryControllerInjected() {
+    if (!Get.isRegistered<HistoryController>()) {
+      Get.put(HistoryController());
     }
   }
 

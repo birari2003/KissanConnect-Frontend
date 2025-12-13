@@ -351,6 +351,57 @@ class LoginsignupView extends GetView<LoginsignupController> {
             // _buildRoleSelector(),
             // const SizedBox(height: 32),
 
+            // Terms and Conditions Checkbox
+            Obx(
+              () => Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: controller.acceptedTerms.value,
+                    onChanged: (value) {
+                      controller.acceptedTerms.value = value ?? false;
+                    },
+                    activeColor: Color(0xFF2E8B57),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        controller.acceptedTerms.value =
+                            !controller.acceptedTerms.value;
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Wrap(
+                          children: [
+                            Text(
+                              '${translate('i_accept')} ',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF2D323A),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: controller.showTermsAndConditions,
+                              child: Text(
+                                translate('terms_and_conditions'),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF2E8B57),
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Signup Button
             Obx(
               () => _buildActionButton(

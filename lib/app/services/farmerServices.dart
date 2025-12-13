@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class FarmerService {
   // Replace with your actual backend URL
   final String baseUrl = 'http://192.168.43.43:5000/farmer';
+  final String paymentUrl = 'http://192.168.43.43:5000/payment';
   // final String baseUrl = 'https://kissanconnect-backend-z00d.onrender.com/farmer';
 
   Future<Map<String, dynamic>> registerFarmerProfile(
@@ -429,6 +430,184 @@ class FarmerService {
       }
     } catch (e) {
       throw Exception('Error fetching messages: $e');
+    }
+  }
+
+  // Get payment details
+  Future<Map<String, dynamic>> getPaymentDetails() async {
+    final url = Uri.parse('$paymentUrl/payment-details');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch payment details');
+      }
+    } catch (e) {
+      throw Exception('Error fetching payment details: $e');
+    }
+  }
+
+  // Submit a crop complaint
+  Future<Map<String, dynamic>> submitCropComplaint({
+    required int againstUserId,
+    required String complaintText,
+  }) async {
+    final url = Uri.parse('$baseUrl/add-complaint');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'against_user_id': againstUserId,
+          'complaint_text': complaintText,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to submit complaint');
+      }
+    } catch (e) {
+      throw Exception('Error submitting complaint: $e');
+    }
+  }
+
+  // Add farmer history
+  Future<Map<String, dynamic>> addFarmerHistory({
+    required int cropSellId,
+    required int cropOwnerUserId,
+    String? cropName,
+    String? cropImagePath,
+  }) async {
+    final url = Uri.parse('$baseUrl/add-history');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'crop_sell_id': cropSellId,
+          'crop_owner_user_id': cropOwnerUserId,
+          'crop_name': cropName,
+          'crop_image_path': cropImagePath,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to add farmer history');
+      }
+    } catch (e) {
+      throw Exception('Error adding farmer history: $e');
+    }
+  }
+
+  // Get farmer history
+  Future<List<dynamic>> getFarmerHistory() async {
+    final url = Uri.parse('$baseUrl/get-history');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data['data'] ?? [];
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch farmer history');
+      }
+    } catch (e) {
+      throw Exception('Error fetching farmer history: $e');
+    }
+  }
+
+  // Get complaints
+  Future<List<dynamic>> getComplaints() async {
+    final url = Uri.parse('$baseUrl/get-complaints');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data['data'] ?? [];
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch complaints');
+      }
+    } catch (e) {
+      throw Exception('Error fetching complaints: $e');
     }
   }
 }

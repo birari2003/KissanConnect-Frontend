@@ -13,6 +13,7 @@ abstract class Routes {
   static const SUPERADMINLIST = _Paths.SUPERADMINLIST;
   static const SUPERADMINPANEL = _Paths.SUPERADMINPANEL;
   static const PAYMENTGETWAY = _Paths.PAYMENTGETWAY;
+  static const HISTORY = _Paths.HISTORY;
 }
 
 abstract class _Paths {
@@ -27,4 +28,5 @@ abstract class _Paths {
   static const SUPERADMINLIST = '/superadminlist';
   static const SUPERADMINPANEL = '/superadminpanel';
   static const PAYMENTGETWAY = '/paymentgetway';
+  static const HISTORY = '/history';
 }

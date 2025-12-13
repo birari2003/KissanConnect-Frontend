@@ -2,14 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../utils/ui_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:ui';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
+import '../controllers/subscription_controller.dart';
+import '../controllers/payment_controller.dart';
 
 class JobApplicationController extends GetxController {
   final jobs = <dynamic>[].obs;
   final isLoading = false.obs;
   final TranslationService _translationService = TranslationService();
+  final SubscriptionController _subscriptionController = Get.put(
+    SubscriptionController(),
+  );
+
+  RxBool get hasSubscription => _subscriptionController.isSubscribed;
 
   Future<String> _translateIfNeed(String text) async {
     try {
@@ -41,6 +49,13 @@ class JobApplicationController extends GetxController {
     try {
       final fetchedJobs = await FarmerService().getJobs();
 
+      // Clear existing jobs to prepare for progressive loading
+      jobs.clear();
+
+      // Stop loading indicator so items can appear progressively
+      isLoading.value = false;
+
+      // Translate and add jobs progressively
       for (var job in fetchedJobs) {
         if (job['job_title'] != null) {
           job['job_title'] = await _translateIfNeed(job['job_title']);
@@ -75,12 +90,12 @@ class JobApplicationController extends GetxController {
             job['job_type'] = await _translateIfNeed(job['job_type']);
           }
         }
-      }
 
-      jobs.assignAll(fetchedJobs);
+        // Add job to UI immediately after translation
+        jobs.add(job);
+      }
     } catch (e) {
       print('Error fetching jobs: $e');
-    } finally {
       isLoading.value = false;
     }
   }
@@ -155,6 +170,11 @@ class JobApplication extends StatelessWidget {
           itemCount: controller.jobs.length,
           itemBuilder: (context, index) {
             final job = controller.jobs[index];
+            final isBlurred = !controller.hasSubscription.value && index >= 3;
+
+            if (isBlurred) {
+              return _buildBlurredJobCard(context, job);
+            }
             return _buildJobCard(context, job);
           },
         );
@@ -329,6 +349,95 @@ class JobApplication extends StatelessWidget {
             fontSize: 13,
             color: Colors.grey[700],
             fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBlurredJobCard(BuildContext context, Map<String, dynamic> job) {
+    return Stack(
+      children: [
+        Opacity(opacity: 0.3, child: _buildJobCard(context, job)),
+        Positioned.fill(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Center(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF2E8B57), Color(0xFF5CC96F)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0xFF2E8B57).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock, color: Colors.white, size: 32),
+                        SizedBox(height: 8),
+                        Text(
+                          translate('subscribe_to_see_more'),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          translate('free_limit_reached'),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final paymentController = Get.put(
+                              PaymentController(),
+                            );
+                            await paymentController.startPayment();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Color(0xFF2E8B57),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            translate('subscribe_now'),
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ],

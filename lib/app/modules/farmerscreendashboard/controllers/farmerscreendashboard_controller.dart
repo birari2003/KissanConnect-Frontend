@@ -5,6 +5,7 @@ import '../../../widhets/subscriptionPopUp.dart';
 import '../../../services/farmerServices.dart';
 import '../../../services/translation_service.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import '../../../controllers/subscription_controller.dart';
 
 enum RequestStatus { accepted, rejected, pending }
 
@@ -66,7 +67,10 @@ class FarmerscreendashboardController extends GetxController {
   }
 
   void _showSubscriptionPopup() {
-    Get.dialog(const SubscriptionPopup(), barrierDismissible: true);
+    final subscriptionController = Get.put(SubscriptionController());
+    if (!subscriptionController.isSubscribed.value) {
+      Get.dialog(const SubscriptionPopup(), barrierDismissible: true);
+    }
   }
 
   Future<void> _loadUserData() async {

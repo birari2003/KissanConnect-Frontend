@@ -3,13 +3,14 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:smart_shetkari/app/controllers/payment_controller.dart';
+import 'dart:ui';
 import '../utils/ui_utils.dart';
+import '../utils/api.dart';
 
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
 import '../controllers/subscription_controller.dart';
-import 'subscriptionPopUp.dart';
+import '../controllers/payment_controller.dart';
 
 class CropClaimController extends GetxController {
   final cropNameController = TextEditingController();
@@ -92,7 +93,7 @@ class CropClaimController extends GetxController {
   Future<void> submitClaim() async {
     // Check subscription status and claim limit for unsubscribed users
     final subscriptionController = Get.put(SubscriptionController());
-    if (!subscriptionController.isSubscribed.value && myClaims.length >= 3) {
+    if (!subscriptionController.isSubscribed.value && myClaims.length >= 1) {
       _showLimitExceededPopup();
       return;
     }
@@ -365,6 +366,342 @@ class CropClaimController extends GetxController {
       print('Error fetching claims: $e');
     } finally {
       isLoadingClaims.value = false;
+    }
+  }
+
+  // Edit crop claim
+  Future<void> editClaim(Map<String, dynamic> claim) async {
+    final editCropNameController = TextEditingController(
+      text: claim['crop_name'],
+    );
+    final editMessageController = TextEditingController(
+      text: claim['claim_details'],
+    );
+    final editAttachedFiles = <ClaimAttachment>[].obs;
+
+    await Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          constraints: BoxConstraints(maxHeight: Get.height * 0.8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF7BB53B).withOpacity(0.05),
+                Color(0xFF54B5D9).withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      translate('edit_claim'),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2A6E9B),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () => Get.back(),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20),
+
+                // Crop Name Field
+                Text(
+                  translate('crop_name_label'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2A6E9B),
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: editCropNameController,
+                  decoration: InputDecoration(
+                    hintText: translate('crop_name_hint'),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Color(0xFF7BB53B),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Claim Details Field
+                Text(
+                  translate('claim_details_label'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2A6E9B),
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: editMessageController,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: translate('claim_details_hint'),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Color(0xFF7BB53B),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Evidence Update
+                Text(
+                  translate('update_evidence'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2A6E9B),
+                  ),
+                ),
+                SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final ImagePicker picker = ImagePicker();
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.gallery,
+                    );
+                    if (image != null) {
+                      editAttachedFiles.clear();
+                      editAttachedFiles.add(
+                        ClaimAttachment(
+                          name: image.name,
+                          path: image.path,
+                          type: ClaimFileType.image,
+                          size: await File(image.path).length(),
+                        ),
+                      );
+                    }
+                  },
+                  icon: Icon(Icons.image),
+                  label: Text(translate('change_evidence')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Color(0xFF7BB53B),
+                    side: BorderSide(color: Color(0xFF7BB53B)),
+                  ),
+                ),
+                SizedBox(height: 8),
+                Obx(() {
+                  if (editAttachedFiles.isEmpty) {
+                    return Text(
+                      translate('current_evidence_kept'),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    );
+                  }
+                  return Text(
+                    '${translate('new_evidence')}: ${editAttachedFiles.first.name}',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF7BB53B)),
+                  );
+                }),
+                SizedBox(height: 24),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                          side: BorderSide(color: Colors.grey[400]!),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(translate('cancel')),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final cropName = editCropNameController.text.trim();
+                          final claimDetails = editMessageController.text
+                              .trim();
+
+                          if (cropName.isEmpty || claimDetails.isEmpty) {
+                            UiUtils.showErrorSnackbar(
+                              translate('error_title'),
+                              translate('fill_all_fields'),
+                            );
+                            return;
+                          }
+
+                          try {
+                            Get.back(); // Close dialog
+
+                            // Show loading
+                            Get.dialog(
+                              Center(child: CircularProgressIndicator()),
+                              barrierDismissible: false,
+                            );
+
+                            await FarmerService().updateCropClaim(
+                              claimId: claim['id'],
+                              cropName: cropName,
+                              claimDetails: claimDetails,
+                              newEvidencePath: editAttachedFiles.isNotEmpty
+                                  ? editAttachedFiles.first.path
+                                  : null,
+                            );
+
+                            Get.back(); // Close loading
+                            UiUtils.showSuccessSnackbar(
+                              translate('success_title'),
+                              translate('claim_updated_success'),
+                            );
+                            fetchClaims();
+                          } catch (e) {
+                            Get.back(); // Close loading
+                            UiUtils.showErrorSnackbar(
+                              translate('error_title'),
+                              e.toString(),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF7BB53B),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(translate('update')),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  // Delete crop claim
+  Future<void> deleteClaim(Map<String, dynamic> claim) async {
+    final confirmed = await Get.dialog<bool>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 60),
+              SizedBox(height: 16),
+              Text(
+                translate('delete_claim_title'),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2A6E9B),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+              Text(
+                translate('delete_claim_message'),
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(result: false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey[400]!),
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(translate('cancel')),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(result: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(translate('delete')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    if (confirmed == true) {
+      try {
+        // Show loading
+        Get.dialog(
+          Center(child: CircularProgressIndicator()),
+          barrierDismissible: false,
+        );
+
+        await FarmerService().deleteCropClaim(claim['id']);
+        Get.back(); // Close loading
+        UiUtils.showSuccessSnackbar(
+          translate('success_title'),
+          translate('claim_deleted_success'),
+        );
+        fetchClaims();
+      } catch (e) {
+        Get.back(); // Close loading
+        UiUtils.showErrorSnackbar(translate('error_title'), e.toString());
+      }
     }
   }
 }
@@ -807,43 +1144,127 @@ class CropClaimWidget extends StatelessWidget {
                                 ),
                               ),
                               SizedBox(height: 12),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: InkWell(
-                                  onTap: () => Get.to(
-                                    () => ClaimDetailView(claim: claim),
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFF2A6E9B).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          translate('view_details'),
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF2A6E9B),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Edit and Delete buttons
+                                  Row(
+                                    children: [
+                                      InkWell(
+                                        onTap: () =>
+                                            controller.editClaim(claim),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Color(
+                                              0xFF7BB53B,
+                                            ).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.edit,
+                                                size: 16,
+                                                color: Color(0xFF7BB53B),
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                translate('edit'),
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF7BB53B),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                        SizedBox(width: 4),
-                                        Icon(
-                                          Icons.arrow_forward,
-                                          size: 16,
-                                          color: Color(0xFF2A6E9B),
+                                      ),
+                                      SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: () =>
+                                            controller.deleteClaim(claim),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.delete,
+                                                size: 16,
+                                                color: Colors.red,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                translate('delete'),
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ],
+                                      ),
+                                    ],
+                                  ),
+                                  // View Details button
+                                  InkWell(
+                                    onTap: () => Get.to(
+                                      () => ClaimDetailView(claim: claim),
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Color(
+                                          0xFF2A6E9B,
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            translate('view_details'),
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2A6E9B),
+                                            ),
+                                          ),
+                                          SizedBox(width: 4),
+                                          Icon(
+                                            Icons.arrow_forward,
+                                            size: 16,
+                                            color: Color(0xFF2A6E9B),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -958,7 +1379,7 @@ class ClaimDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String imageBaseUrl = 'http://192.168.43.43:5000';
+    final String imageBaseUrl = ApiConfig.getBaseUrl();
     final evidencePath = claim['evidence'];
 
     return Scaffold(
@@ -987,15 +1408,9 @@ class ClaimDetailView extends StatelessWidget {
                   '$imageBaseUrl/uploads/$evidencePath',
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: Center(
-                        child: Icon(
-                          Icons.broken_image,
-                          size: 50,
-                          color: Colors.grey[500],
-                        ),
-                      ),
+                    return Image.asset(
+                      'assets/images/crop.jpg',
+                      fit: BoxFit.cover,
                     );
                   },
                 ),

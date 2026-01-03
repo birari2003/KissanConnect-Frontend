@@ -50,4 +50,19 @@ class UiUtils {
       duration: Duration(seconds: 3),
     );
   }
+
+  static void showWarningSnackbar(String title, String message) {
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.orange.shade600,
+      colorText: Colors.white,
+      margin: EdgeInsets.all(16),
+      borderRadius: 8,
+      icon: Icon(Icons.warning_amber_rounded, color: Colors.white),
+      isDismissible: true,
+      duration: Duration(seconds: 3),
+    );
+  }
 }

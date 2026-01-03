@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../utils/api.dart';
 
 class EmailService {
   // Base URL for the backend API
   final String baseUrl;
 
-  EmailService({this.baseUrl = 'http://192.168.43.43:5000/farmer'});
-  // EmailService({this.baseUrl = 'https://kissanconnect-backend-z00d.onrender.com/farmer'});
+  EmailService({String? baseUrl})
+    : baseUrl = baseUrl ?? ApiConfig.farmerBaseUrl;
 
   /// Send email via backend API
   ///

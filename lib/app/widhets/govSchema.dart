@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 import '../utils/ui_utils.dart';
+import '../utils/api.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
@@ -49,14 +50,13 @@ class GovSchemaController extends GetxController {
     try {
       final fetchedSchemes = await FarmerService().getGovernmentSchemes();
 
-      // Clear existing schemes to prepare for progressive loading
+      // Clear existing schemes
       schemes.clear();
 
-      // Stop loading indicator so items can appear progressively
-      isLoading.value = false;
-
       // Translate and add schemes progressively
-      for (var scheme in fetchedSchemes) {
+      for (int i = 0; i < fetchedSchemes.length; i++) {
+        var scheme = fetchedSchemes[i];
+
         if (scheme['title'] != null) {
           scheme['title'] = await _translateIfNeed(scheme['title']);
         }
@@ -66,6 +66,16 @@ class GovSchemaController extends GetxController {
 
         // Add scheme to UI immediately after translation
         schemes.add(scheme);
+
+        // Stop loading indicator after first scheme is added
+        if (i == 0) {
+          isLoading.value = false;
+        }
+      }
+
+      // If no schemes were fetched, stop loading
+      if (fetchedSchemes.isEmpty) {
+        isLoading.value = false;
       }
     } catch (e) {
       print('Error fetching schemes: $e');
@@ -78,7 +88,7 @@ class GovSchemaController extends GetxController {
       // If it's a relative path (uploaded file), append base URL
       final fullUrl = url.startsWith('http')
           ? url
-          : 'http://192.168.43.43:5000/uploads/$url';
+          : ApiConfig.getUploadUrl(url);
 
       final uri = Uri.parse(fullUrl);
       if (await canLaunchUrl(uri)) {
@@ -149,7 +159,7 @@ class GovSchema extends StatelessWidget {
         : 'N/A';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -201,7 +211,7 @@ class GovSchema extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'Active', // Assuming fetched schemes are active/published
+                        translate('active_status'),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -284,15 +294,16 @@ class GovSchema extends StatelessWidget {
                 ),
                 child: Center(
                   child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: 12),
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [Color(0xFF2A6E9B), Color(0xFF54B5D9)],
+                        colors: [Color(0xFF2E8B57), Color(0xFF5CC96F)],
                       ),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFF2A6E9B).withOpacity(0.3),
+                          color: Color(0xFF2E8B57).withOpacity(0.3),
                           blurRadius: 8,
                           offset: Offset(0, 4),
                         ),
@@ -302,7 +313,7 @@ class GovSchema extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.lock, color: Colors.white, size: 18),
-                        SizedBox(height: 6),
+                        SizedBox(height: 2),
                         Text(
                           translate('subscribe_to_see_more'),
                           style: TextStyle(
@@ -331,7 +342,7 @@ class GovSchema extends StatelessWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
-                            foregroundColor: Color(0xFF2A6E9B),
+                            foregroundColor: Color(0xFF2E8B57),
                             padding: EdgeInsets.symmetric(
                               horizontal: 18,
                               vertical: 9,
@@ -433,7 +444,7 @@ class SchemeDetailView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Description',
+                    translate('description_label'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

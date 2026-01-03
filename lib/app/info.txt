@@ -29,7 +29,20 @@ for email sending and other features as exceptions we need to store in table
 
 after 1 month user should see the subscription pop up
 
-
-
 job post list
 start date and end date 
+
+1 crop claim only then show pop up, total prize in sell crop, integrate 1 month plan, after 3 month dissable crop list, update  crop, delete crop, 
+
+------------------------------------------------------------------------------------
+isBulkUpload
+isWhatsappSended
+neverAskPassword
+
+buld uplaod for nurcery - need info of onion crop is available their, 
+fertilizer - want data of where is availble organinc and inorganic fertilizer
+farmer tools - want data of where is availble farmer tools
+
+need vehical on rent for transportaion ... if I want to transport my crops to market 
+
+bajar bhav

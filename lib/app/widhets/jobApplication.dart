@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../utils/ui_utils.dart';
+import '../utils/api.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 import 'package:flutter_translate/flutter_translate.dart';
@@ -49,14 +50,13 @@ class JobApplicationController extends GetxController {
     try {
       final fetchedJobs = await FarmerService().getJobs();
 
-      // Clear existing jobs to prepare for progressive loading
+      // Clear existing jobs
       jobs.clear();
 
-      // Stop loading indicator so items can appear progressively
-      isLoading.value = false;
-
       // Translate and add jobs progressively
-      for (var job in fetchedJobs) {
+      for (int i = 0; i < fetchedJobs.length; i++) {
+        var job = fetchedJobs[i];
+
         if (job['job_title'] != null) {
           job['job_title'] = await _translateIfNeed(job['job_title']);
         }
@@ -93,6 +93,16 @@ class JobApplicationController extends GetxController {
 
         // Add job to UI immediately after translation
         jobs.add(job);
+
+        // Stop loading indicator after first job is added
+        if (i == 0) {
+          isLoading.value = false;
+        }
+      }
+
+      // If no jobs were fetched, stop loading
+      if (fetchedJobs.isEmpty) {
+        isLoading.value = false;
       }
     } catch (e) {
       print('Error fetching jobs: $e');
@@ -104,7 +114,7 @@ class JobApplicationController extends GetxController {
     // Construct full URL if it's a relative path (filename)
     String fullUrl = urlString;
     if (!urlString.startsWith('http')) {
-      fullUrl = 'http://192.168.43.43:5000/uploads/$urlString';
+      fullUrl = ApiConfig.getUploadUrl(urlString);
     }
 
     final Uri url = Uri.parse(fullUrl);
@@ -371,6 +381,8 @@ class JobApplication extends StatelessWidget {
                 ),
                 child: Center(
                   child: Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.symmetric(horizontal: 16),
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -388,27 +400,27 @@ class JobApplication extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.lock, color: Colors.white, size: 32),
-                        SizedBox(height: 8),
+                        Icon(Icons.lock, color: Colors.white, size: 18),
+                        SizedBox(height: 6),
                         Text(
                           translate('subscribe_to_see_more'),
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        SizedBox(height: 4),
+                        SizedBox(height: 2),
                         Text(
                           translate('free_limit_reached'),
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
-                            fontSize: 12,
+                            fontSize: 11,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        SizedBox(height: 12),
+                        SizedBox(height: 8),
                         ElevatedButton(
                           onPressed: () async {
                             final paymentController = Get.put(
@@ -420,8 +432,8 @@ class JobApplication extends StatelessWidget {
                             backgroundColor: Colors.white,
                             foregroundColor: Color(0xFF2E8B57),
                             padding: EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
+                              horizontal: 18,
+                              vertical: 9,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),

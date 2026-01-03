@@ -1,16 +1,18 @@
 // registration_form.dart
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/api.dart';
 import '../utils/ui_utils.dart';
 import '../services/farmerServices.dart';
 import '../services/adminServices.dart';
@@ -1876,25 +1878,24 @@ class _RegistrationFormState extends State<RegistrationForm>
                         color: Colors.green.shade200,
                         width: 3,
                       ),
-                      image: profile['passport_photo'] != null
-                          ? DecorationImage(
-                              image: NetworkImage(
-                                'http://192.168.43.43:5000/uploads/${profile['passport_photo']}',
-                              ),
+                    ),
+                    child: ClipOval(
+                      child: profile['passport_photo'] != null
+                          ? Image.network(
+                              ApiConfig.getUploadUrl(profile['passport_photo']),
                               fit: BoxFit.cover,
-                              onError: (exception, stackTrace) {
-                                // Fallback or placeholder
+                              errorBuilder: (context, error, stackTrace) {
+                                return Image.asset(
+                                  'assets/images/user.png',
+                                  fit: BoxFit.cover,
+                                );
                               },
                             )
-                          : null,
+                          : Image.asset(
+                              'assets/images/user.png',
+                              fit: BoxFit.cover,
+                            ),
                     ),
-                    child: profile['passport_photo'] == null
-                        ? Icon(
-                            Icons.person,
-                            size: 60,
-                            color: Colors.grey.shade400,
-                          )
-                        : null,
                   ),
                   const SizedBox(height: 16),
                   Text(

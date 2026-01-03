@@ -27,7 +27,7 @@ class FarmerscreendashboardController extends GetxController {
   final RxString farmerName = 'Loading...'.obs;
   final RxString farmerEmail = ''.obs;
   final RxString farmerPhone = ''.obs;
-  final RxString farmLocation = 'My Location'.obs;
+  final RxString farmLocation = translate('my_location').obs;
   final RxString farmerPhoto = ''.obs;
 
   // Sample data for dashboard (can be replaced with real API data later)

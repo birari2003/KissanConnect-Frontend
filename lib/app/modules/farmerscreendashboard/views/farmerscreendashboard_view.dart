@@ -10,6 +10,8 @@ import '../../../widhets/query_popup.dart';
 import '../../../widhets/cropList.dart';
 import '../../../widhets/govSchema.dart';
 import '../../../widhets/jobApplication.dart';
+import '../../../widhets/complaints_page.dart';
+import '../../../utils/api.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 
 class FarmerscreendashboardView
@@ -96,23 +98,27 @@ class FarmerscreendashboardView
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(100),
                             child: Image.network(
-                              'http://192.168.43.43:5000/uploads/${controller.farmerPhoto.value}',
+                              ApiConfig.getUploadUrl(
+                                controller.farmerPhoto.value,
+                              ),
                               width: 56,
                               height: 56,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                return const Icon(
-                                  Icons.agriculture,
-                                  color: Color(0xFF2E8B57),
-                                  size: 56,
+                                return Image.asset(
+                                  'assets/images/user.png',
+                                  width: 56,
+                                  height: 56,
+                                  fit: BoxFit.cover,
                                 );
                               },
                             ),
                           )
-                        : const Icon(
-                            Icons.agriculture,
-                            color: Color(0xFF2E8B57),
-                            size: 56,
+                        : Image.asset(
+                            'assets/images/user.png',
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
                           ),
                   ),
                 ),
@@ -185,6 +191,12 @@ class FarmerscreendashboardView
                       title: translate('jobs'),
                       index: 7,
                       isSelected: controller.selectedIndex.value == 7,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.report_problem,
+                      title: translate('complaints_queries_title'),
+                      index: 8,
+                      isSelected: controller.selectedIndex.value == 8,
                     ),
                     _buildNavItem(
                       icon: Icons.settings,
@@ -316,6 +328,13 @@ class FarmerscreendashboardView
             translate('job_applications'),
             Icons.work,
             const JobApplication(),
+          );
+        case 8:
+          return _buildPageWithHeader(
+            context,
+            translate('complaints_queries_title'),
+            Icons.report_problem,
+            const ComplaintsPage(),
           );
         default:
           return _buildPageWithHeader(
@@ -526,22 +545,32 @@ class FarmerscreendashboardView
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           shape: BoxShape.circle,
-                          image: controller.farmerPhoto.value.isNotEmpty
-                              ? DecorationImage(
-                                  image: NetworkImage(
-                                    'http://192.168.43.43:5000/uploads/${controller.farmerPhoto.value}',
-                                  ),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
                         ),
-                        child: controller.farmerPhoto.value.isEmpty
-                            ? const Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: 32,
-                              )
-                            : null,
+                        child: ClipOval(
+                          child: controller.farmerPhoto.value.isNotEmpty
+                              ? Image.network(
+                                  ApiConfig.getUploadUrl(
+                                    controller.farmerPhoto.value,
+                                  ),
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'assets/images/user.png',
+                                      width: 60,
+                                      height: 60,
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                )
+                              : Image.asset(
+                                  'assets/images/user.png',
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -753,7 +782,7 @@ class FarmerscreendashboardView
 
   Widget _buildMessageCard(dynamic message) {
     final messageText = message['message'] ?? 'No message';
-    final senderName = message['sender_name'] ?? 'Admin';
+    final senderName = message['sender_name'] ?? translate('admin_role');
     final senderRole = message['sender_role'] ?? 'admin';
     final createdAt = message['created_at'] ?? '';
 
@@ -830,7 +859,9 @@ class FarmerscreendashboardView
                         ),
                       ),
                       Text(
-                        senderRole == 'super_admin' ? 'Super Admin' : 'Admin',
+                        senderRole == 'super_admin'
+                            ? translate('super_admin_role')
+                            : translate('admin_role'),
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],

@@ -16,14 +16,7 @@ class GlobalChatbotController extends GetxController {
 
   final List<String> excludedRoutes = [
     '/splashscreen',
-    '/farmerscreendashboard',
-    '/login',
-    '/register',
     '/selectlanguage',
-    '/view-demo',
-    '/otp-verification',
-    '/forgot-password',
-    '/initial-screen',
     '/loginsignup',
   ];
 
@@ -92,7 +85,7 @@ class GlobalChatbotController extends GetxController {
             {
               'role': 'system',
               'content':
-                  'You are a helpful assistant for the KissanConnect app. Answer questions concisely and helpfully.',
+                  'You are a helpful assistant for the Smart Shetkari app. Answer questions concisely and helpfully.',
             },
             {'role': 'user', 'content': text},
           ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/loginsignup_controller.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import '../../../widhets/forgot_pass.dart';
 
 class LoginsignupView extends GetView<LoginsignupController> {
   const LoginsignupView({super.key});
@@ -203,24 +204,23 @@ class LoginsignupView extends GetView<LoginsignupController> {
             const SizedBox(height: 12),
 
             // Forgot Password
-            // Align(
-            //   alignment: Alignment.centerRight,
-            //   child: TextButton(
-            //     onPressed: () {
-            //       // TODO: Implement forgot password
-            //     },
-            //     child: const Text(
-            //       'Forgot Password?',
-            //       style: TextStyle(
-            //         color: Color(0xFF3C9ED0),
-            //         fontWeight: FontWeight.w600,
-            //       ),
-            //     ),
-            //   ),
-            // ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  Get.to(() => const ForgotPasswordScreen());
+                },
+                child: Text(
+                  translate('forgotPassword'),
+                  style: const TextStyle(
+                    color: Color(0xFF3C9ED0),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
 
-            // extra
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
             // Login Button
             Obx(

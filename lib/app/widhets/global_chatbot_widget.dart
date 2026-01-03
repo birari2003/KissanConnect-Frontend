@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../controllers/global_chatbot_controller.dart';
 
 class GlobalChatbotWidget extends StatelessWidget {
@@ -18,7 +19,7 @@ class GlobalChatbotWidget extends StatelessWidget {
         Obx(() {
           if (!controller.isVisible.value) return SizedBox.shrink();
           return Positioned(
-            bottom: 16,
+            bottom: 80,
             right: 16,
             child: FloatingActionButton(
               onPressed: () => _showChatDialog(controller),
@@ -59,7 +60,7 @@ class GlobalChatbotWidget extends StatelessWidget {
                         Icon(Icons.smart_toy, color: Colors.white),
                         SizedBox(width: 8),
                         Text(
-                          'Kissan AI Assistant',
+                          translate('app_title'),
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -92,7 +93,7 @@ class GlobalChatbotWidget extends StatelessWidget {
                           ),
                           SizedBox(height: 16),
                           Text(
-                            'How can I help you today?',
+                            translate('chatbot_greeting'),
                             style: TextStyle(
                               color: Colors.grey[500],
                               fontSize: 14,
@@ -158,7 +159,7 @@ class GlobalChatbotWidget extends StatelessWidget {
                       child: TextField(
                         controller: controller.messageController,
                         decoration: InputDecoration(
-                          hintText: 'Ask something...',
+                          hintText: translate('chatbot_input_hint'),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
                             borderSide: BorderSide.none,

@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../utils/api.dart';
 
 class AuthService {
   final String baseUrl;
 
-  AuthService({this.baseUrl = 'http://192.168.43.43:5000/farmer'});
-  // AuthService({this.baseUrl = 'https://kissanconnect-backend-z00d.onrender.com/farmer'});
-  
+  AuthService({String? baseUrl}) : baseUrl = baseUrl ?? ApiConfig.farmerBaseUrl;
 
   Future<Map<String, dynamic>> registerUser({
     required String name,
@@ -47,14 +46,22 @@ class AuthService {
   Future<Map<String, dynamic>> loginUser({
     required String phone,
     required String password,
+    String? languagePreference,
   }) async {
     final url = Uri.parse('$baseUrl/login');
 
     try {
+      final body = {'phone': phone, 'password': password};
+
+      // Add language_preference if provided
+      if (languagePreference != null && languagePreference.isNotEmpty) {
+        body['language_preference'] = languagePreference;
+      }
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phone': phone, 'password': password}),
+        body: jsonEncode(body),
       );
       print(response.body);
 

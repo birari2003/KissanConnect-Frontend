@@ -4,11 +4,14 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'dart:ui';
 import '../utils/ui_utils.dart';
+import '../utils/api.dart';
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
 import '../controllers/subscription_controller.dart';
 import '../controllers/payment_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SellCropController extends GetxController {
   final cropNameController = TextEditingController();
@@ -17,6 +20,7 @@ class SellCropController extends GetxController {
 
   final selectedUnit = 'Quintal'.obs;
   final units = ['Quintal', 'Kg', 'Ton', 'Bag'];
+  final totalAmount = 0.0.obs;
 
   String _getTranslatedUnit(String unit) {
     switch (unit.toLowerCase()) {
@@ -62,6 +66,16 @@ class SellCropController extends GetxController {
   void onInit() {
     super.onInit();
     fetchCrops();
+
+    // Add listeners to calculate total amount
+    quantityController.addListener(_calculateTotal);
+    priceController.addListener(_calculateTotal);
+  }
+
+  void _calculateTotal() {
+    final quantity = double.tryParse(quantityController.text.trim()) ?? 0.0;
+    final price = double.tryParse(priceController.text.trim()) ?? 0.0;
+    totalAmount.value = quantity * price;
   }
 
   @override
@@ -388,6 +402,423 @@ class SellCropController extends GetxController {
       isLoadingCrops.value = false;
     }
   }
+
+  // Edit crop listing
+  Future<void> editCrop(Map<String, dynamic> crop) async {
+    final editCropNameController = TextEditingController(
+      text: crop['crop_name'],
+    );
+    final editQuantityController = TextEditingController(
+      text: crop['quantity'].toString(),
+    );
+    final editPriceController = TextEditingController(
+      text: crop['price_per_unit'].toString(),
+    );
+    final editSelectedUnit = RxString(crop['unit'] ?? 'Quintal');
+    final editSelectedImages = <CropImage>[].obs;
+
+    await Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          constraints: BoxConstraints(maxHeight: Get.height * 0.85),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF2E8B57).withOpacity(0.05),
+                Color(0xFF5CC96F).withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      translate('edit_crop'),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E8B57),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () => Get.back(),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20),
+
+                // Crop Name
+                Text(
+                  translate('crop_name_label'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2E8B57),
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: editCropNameController,
+                  decoration: InputDecoration(
+                    hintText: translate('crop_name_hint'),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Color(0xFF2E8B57),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Quantity and Unit
+                Text(
+                  translate('quantity_label'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2E8B57),
+                  ),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        controller: editQuantityController,
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: translate('quantity_hint'),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: Color(0xFF2E8B57),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      flex: 1,
+                      child: Obx(
+                        () => Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: editSelectedUnit.value,
+                              isExpanded: true,
+                              items: units.map((String unit) {
+                                return DropdownMenuItem<String>(
+                                  value: unit,
+                                  child: Text(_getTranslatedUnit(unit)),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  editSelectedUnit.value = newValue;
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16),
+
+                // Price
+                Text(
+                  translate('price_label'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2E8B57),
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: editPriceController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    hintText: translate('price_hint'),
+                    prefixIcon: Icon(
+                      Icons.currency_rupee,
+                      color: Color(0xFF2E8B57),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Color(0xFF2E8B57),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Photos Update
+                Text(
+                  translate('update_photos'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2E8B57),
+                  ),
+                ),
+                SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final ImagePicker picker = ImagePicker();
+                    final List<XFile> images = await picker.pickMultiImage(
+                      imageQuality: 85,
+                    );
+                    editSelectedImages.clear();
+                    for (var image in images) {
+                      editSelectedImages.add(
+                        CropImage(
+                          name: image.name,
+                          path: image.path,
+                          size: await File(image.path).length(),
+                        ),
+                      );
+                    }
+                  },
+                  icon: Icon(Icons.image),
+                  label: Text(translate('change_photos')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Color(0xFF2E8B57),
+                    side: BorderSide(color: Color(0xFF2E8B57)),
+                  ),
+                ),
+                SizedBox(height: 8),
+                Obx(() {
+                  if (editSelectedImages.isEmpty) {
+                    return Text(
+                      translate('current_photos_kept'),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    );
+                  }
+                  return Text(
+                    '${translate('new_photos')}: ${editSelectedImages.length} ${translate('selected')}',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF2E8B57)),
+                  );
+                }),
+                SizedBox(height: 24),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                          side: BorderSide(color: Colors.grey[400]!),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(translate('cancel')),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final cropName = editCropNameController.text.trim();
+                          final quantity = editQuantityController.text.trim();
+                          final price = editPriceController.text.trim();
+
+                          if (cropName.isEmpty ||
+                              quantity.isEmpty ||
+                              price.isEmpty) {
+                            UiUtils.showErrorSnackbar(
+                              translate('error_title'),
+                              translate('fill_all_fields'),
+                            );
+                            return;
+                          }
+
+                          try {
+                            Get.back(); // Close dialog
+
+                            // Show loading
+                            Get.dialog(
+                              Center(child: CircularProgressIndicator()),
+                              barrierDismissible: false,
+                            );
+
+                            await FarmerService().updateCrop(
+                              cropId: crop['id'],
+                              cropName: cropName,
+                              quantity: quantity,
+                              unit: editSelectedUnit.value,
+                              pricePerUnit: price,
+                              newPhotoPaths: editSelectedImages.isNotEmpty
+                                  ? editSelectedImages
+                                        .map((img) => img.path)
+                                        .toList()
+                                  : null,
+                            );
+
+                            Get.back(); // Close loading
+                            UiUtils.showSuccessSnackbar(
+                              translate('success_title'),
+                              translate('crop_updated_success'),
+                            );
+                            fetchCrops();
+                          } catch (e) {
+                            Get.back(); // Close loading
+                            UiUtils.showErrorSnackbar(
+                              translate('error_title'),
+                              e.toString(),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF2E8B57),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(translate('update')),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  // Delete crop listing
+  Future<void> deleteCrop(Map<String, dynamic> crop) async {
+    final confirmed = await Get.dialog<bool>(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 60),
+              SizedBox(height: 16),
+              Text(
+                translate('delete_crop_title'),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E8B57),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+              Text(
+                translate('delete_crop_message'),
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(result: false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey[400]!),
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(translate('cancel')),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(result: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(translate('delete')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    if (confirmed == true) {
+      try {
+        // Show loading
+        Get.dialog(
+          Center(child: CircularProgressIndicator()),
+          barrierDismissible: false,
+        );
+
+        await FarmerService().deleteCrop(crop['id']);
+        Get.back(); // Close loading
+        UiUtils.showSuccessSnackbar(
+          translate('success_title'),
+          translate('crop_deleted_success'),
+        );
+        fetchCrops();
+      } catch (e) {
+        Get.back(); // Close loading
+        UiUtils.showErrorSnackbar(translate('error_title'), e.toString());
+      }
+    }
+  }
 }
 
 class CropImage {
@@ -682,6 +1113,117 @@ class SellCropWidget extends StatelessWidget {
             ),
             SizedBox(height: 16),
 
+            // Total Amount Calculation Box
+            Obx(() {
+              final total = controller.totalAmount.value;
+              final hasValues =
+                  controller.quantityController.text.isNotEmpty &&
+                  controller.priceController.text.isNotEmpty;
+
+              return AnimatedContainer(
+                duration: Duration(milliseconds: 300),
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: hasValues
+                        ? [Color(0xFF2E8B57), Color(0xFF5CC96F)]
+                        : [Colors.grey[300]!, Colors.grey[400]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: hasValues
+                      ? [
+                          BoxShadow(
+                            color: Color(0xFF2E8B57).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.calculate,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                translate('estimated_total'),
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                hasValues
+                                    ? '₹ ${total.toStringAsFixed(2)}'
+                                    : '₹ 0.00',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (hasValues) ...[
+                      SizedBox(height: 12),
+                      Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                translate('calculation_info'),
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.95),
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+            SizedBox(height: 16),
+
             // Image Picker
             _buildCard(
               child: Column(
@@ -910,101 +1452,195 @@ class SellCropWidget extends StatelessWidget {
                           .map(
                             (crop) => Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),
-                              child: InkWell(
-                                onTap: () =>
-                                    Get.to(() => CropDetailView(crop: crop)),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: 12,
-                                    horizontal: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.grey[200]!,
+                              child: Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[200]!),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Color(
+                                              0xFF2E8B57,
+                                            ).withOpacity(0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.agriculture,
+                                            size: 16,
+                                            color: Color(0xFF2E8B57),
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                crop['crop_name'] ??
+                                                    translate('unknown_crop'),
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              SizedBox(height: 2),
+                                              Text(
+                                                '${crop['quantity']} ${controller._getTranslatedUnit(crop['unit'] ?? '')}',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: Color(
-                                            0xFF2E8B57,
-                                          ).withOpacity(0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.agriculture,
-                                          size: 16,
-                                          color: Color(0xFF2E8B57),
-                                        ),
-                                      ),
-                                      SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                    SizedBox(height: 12),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // Edit and Delete buttons
+                                        Row(
                                           children: [
-                                            Text(
-                                              crop['crop_name'] ??
-                                                  translate('unknown_crop'),
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.black87,
+                                            InkWell(
+                                              onTap: () =>
+                                                  controller.editCrop(crop),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 6,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Color(
+                                                    0xFF2E8B57,
+                                                  ).withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.edit,
+                                                      size: 14,
+                                                      color: Color(0xFF2E8B57),
+                                                    ),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      translate('edit'),
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Color(
+                                                          0xFF2E8B57,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                            SizedBox(height: 2),
-                                            Text(
-                                              '${crop['quantity']} ${controller._getTranslatedUnit(crop['unit'] ?? '')}',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
+                                            SizedBox(width: 8),
+                                            InkWell(
+                                              onTap: () =>
+                                                  controller.deleteCrop(crop),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 6,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red.withOpacity(
+                                                    0.1,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.delete,
+                                                      size: 14,
+                                                      color: Colors.red,
+                                                    ),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      translate('delete'),
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors.red,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
+                                        // View button
+                                        InkWell(
+                                          onTap: () => Get.to(
+                                            () => CropDetailView(crop: crop),
+                                          ),
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
-                                          border: Border.all(
-                                            color: Color(
-                                              0xFF2E8B57,
-                                            ).withOpacity(0.3),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Text(
-                                              translate('view_label'),
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF2E8B57),
-                                                fontWeight: FontWeight.bold,
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: Color(
+                                                  0xFF2E8B57,
+                                                ).withOpacity(0.3),
                                               ),
                                             ),
-                                            SizedBox(width: 4),
-                                            Icon(
-                                              Icons.arrow_forward_ios,
-                                              size: 10,
-                                              color: Color(0xFF2E8B57),
+                                            child: Row(
+                                              children: [
+                                                Text(
+                                                  translate('view_label'),
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(0xFF2E8B57),
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 4),
+                                                Icon(
+                                                  Icons.arrow_forward_ios,
+                                                  size: 10,
+                                                  color: Color(0xFF2E8B57),
+                                                ),
+                                              ],
                                             ),
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -1113,7 +1749,7 @@ class CropDetailView extends StatelessWidget {
     final photos = crop['photos'] as List? ?? [];
     // Assuming images are served from root/uploads or similar.
     // Adjust base URL as needed. Using the same host as FarmerService but root.
-    final String imageBaseUrl = 'http://192.168.43.43:5000';
+    final String imageBaseUrl = ApiConfig.getBaseUrl();
     final SellCropController controller = Get.find<SellCropController>();
 
     return Scaffold(
@@ -1154,15 +1790,9 @@ class CropDetailView extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         // Fallback to try without /uploads/ if needed or just show error
-                        return Container(
-                          color: Colors.grey[300],
-                          child: Center(
-                            child: Icon(
-                              Icons.broken_image,
-                              size: 50,
-                              color: Colors.grey[500],
-                            ),
-                          ),
+                        return Image.asset(
+                          'assets/images/crop.jpg',
+                          fit: BoxFit.cover,
                         );
                       },
                     );
@@ -1170,17 +1800,11 @@ class CropDetailView extends StatelessWidget {
                 ),
               )
             else
-              Container(
+              Image.asset(
+                'assets/images/crop.jpg',
                 height: 250,
                 width: double.infinity,
-                color: Colors.grey[300],
-                child: Center(
-                  child: Icon(
-                    Icons.image_not_supported,
-                    size: 64,
-                    color: Colors.grey[500],
-                  ),
-                ),
+                fit: BoxFit.cover,
               ),
 
             Padding(

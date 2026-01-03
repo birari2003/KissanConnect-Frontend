@@ -6,10 +6,12 @@ import 'dart:convert';
 
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
+import '../utils/api.dart';
 
 import '../utils/ui_utils.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/subscription_controller.dart';
+import 'change_password.dart';
 
 class SettingsWidget extends StatefulWidget {
   final String selectedLanguage;
@@ -226,6 +228,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                       const SizedBox(height: 24),
                       _buildAboutSection(),
                       const SizedBox(height: 24),
+                      _buildSubscriptionSection(),
+                      const SizedBox(height: 24),
                       _buildLogoutButton(),
                       const SizedBox(height: 20),
                     ],
@@ -293,9 +297,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               shape: BoxShape.circle,
               image: _farmerPhoto.isNotEmpty
                   ? DecorationImage(
-                      image: NetworkImage(
-                        'http://192.168.43.43:5000/uploads/$_farmerPhoto',
-                      ),
+                      image: NetworkImage(ApiConfig.getUploadUrl(_farmerPhoto)),
                       fit: BoxFit.cover,
                       onError: (exception, stackTrace) {},
                     )
@@ -380,25 +382,29 @@ class _SettingsWidgetState extends State<SettingsWidget> {
                   activeColor: const Color(0xFF2E8B57),
                 ),
               ),
-              const Divider(height: 1),
+              const Divider(height: 1, indent: 70),
               _buildSettingTile(
-                icon: Icons.dark_mode_outlined,
-                title: translate('dark_mode_title'),
-                subtitle: translate('dark_mode_subtitle'),
-                trailing: Switch(
-                  value: _darkModeEnabled,
-                  onChanged: _saveDarkModeSetting,
-                  activeColor: const Color(0xFF2E8B57),
-                ),
-              ),
-              const Divider(height: 1),
-              _buildSettingTile(
-                icon: Icons.language_outlined,
-                title: translate('language_title'),
-                subtitle: _getLanguageName(_selectedLanguage),
+                icon: Icons.lock_outline,
+                title: translate('changePassword'),
+                subtitle: 'Update your account password',
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => _showLanguageDialog(),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ChangePasswordScreen(),
+                    ),
+                  );
+                },
               ),
+              // const Divider(height: 1, indent: 70),
+              // _buildSettingTile(
+              //   icon: Icons.language_outlined,
+              //   title: translate('language_title'),
+              //   subtitle: _getLanguageName(_selectedLanguage),
+              //   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              //   onTap: () => _showLanguageDialog(),
+              // ),
             ],
           ),
         ),
@@ -411,7 +417,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          translate('about_section'),
+          translate('app_information'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -434,188 +440,258 @@ class _SettingsWidgetState extends State<SettingsWidget> {
           child: Column(
             children: [
               _buildSettingTile(
-                icon: Icons.help_outline,
-                title: translate('help_support_title'),
-                subtitle: translate('help_support_subtitle'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  // Navigate to help
-                },
-              ),
-              const Divider(height: 1),
-              _buildSettingTile(
-                icon: Icons.privacy_tip_outlined,
-                title: translate('privacy_policy_title'),
-                subtitle: translate('privacy_policy_subtitle'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  // Navigate to privacy policy
-                },
-              ),
-              const Divider(height: 1),
-              _buildSettingTile(
                 icon: Icons.info_outline,
                 title: translate('about_app_title'),
-                subtitle: translate(
-                  'version_info',
-                ), // Keeping version hardcoded or translatable if needed, usually version is standard
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  // Show about dialog
-                  _showAboutDialog();
-                },
+                subtitle: 'Version 1.0.0',
+                trailing: const SizedBox.shrink(),
               ),
-              const Divider(height: 1),
+              const Divider(height: 1, indent: 70),
               _buildSettingTile(
-                icon: Icons.payment,
-                title: translate('make_payment_title'),
-                subtitle: translate('make_payment_subtitle'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () async {
-                  final subscriptionController = Get.put(
-                    SubscriptionController(),
-                  );
-                  await subscriptionController
-                      .checkSubscriptionStatus(); // Ensure fresh status
-
-                  if (subscriptionController.isSubscribed.value) {
-                    Get.dialog(
-                      Dialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF4CAF50).withOpacity(0.9),
-                                Color(0xFF2E7D32),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          padding: EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Success Icon with animation effect
-                              Container(
-                                padding: EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.white.withOpacity(0.3),
-                                      blurRadius: 20,
-                                      spreadRadius: 5,
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  Icons.check_circle,
-                                  size: 64,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              SizedBox(height: 24),
-
-                              // Title
-                              Text(
-                                translate('subscription_active_title'),
-                                style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: 12),
-
-                              // Message
-                              Text(
-                                translate(
-                                  'subscription_already_active_message',
-                                ),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white.withOpacity(0.95),
-                                  height: 1.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: 24),
-
-                              // Premium Features
-                              Container(
-                                padding: EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    _buildActiveFeatureRow(
-                                      Icons.check_circle_outline,
-                                      translate('unlimited_claims'),
-                                    ),
-                                    SizedBox(height: 12),
-                                    _buildActiveFeatureRow(
-                                      Icons.check_circle_outline,
-                                      translate('unlimited_listings'),
-                                    ),
-                                    SizedBox(height: 12),
-                                    _buildActiveFeatureRow(
-                                      Icons.check_circle_outline,
-                                      translate('view_all_contacts'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 28),
-
-                              // Close Button
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () => Get.back(),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Color(0xFF2E7D32),
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    translate('ok'),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      barrierDismissible: true,
-                    );
-                  } else {
-                    final paymentController = Get.put(PaymentController());
-                    await paymentController.startPayment();
-                  }
-                },
+                icon: Icons.update_outlined,
+                title: translate('last_updated'),
+                subtitle: 'December 2025',
+                trailing: const SizedBox.shrink(),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Text(
+        //   translate('help_support_section'),
+        //   style: TextStyle(
+        //     fontSize: 18,
+        //     fontWeight: FontWeight.bold,
+        //     color: Color(0xFF2D323A),
+        //   ),
+        // ),
+        // const SizedBox(height: 12),
+        // Container(
+        //   decoration: BoxDecoration(
+        //     color: Colors.white,
+        //     borderRadius: BorderRadius.circular(16),
+        //     boxShadow: [
+        //       BoxShadow(
+        //         color: Colors.grey.withOpacity(0.1),
+        //         blurRadius: 10,
+        //         offset: const Offset(0, 5),
+        //       ),
+        //     ],
+        //   ),
+        //   child: Column(
+        //     children: [
+        //       _buildSettingTile(
+        //         icon: Icons.help_outline,
+        //         title: translate('help_support_title'),
+        //         subtitle: translate('help_support_subtitle'),
+        //         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        //         onTap: () {},
+        //       ),
+        //       const Divider(height: 1, indent: 70),
+        //       _buildSettingTile(
+        //         icon: Icons.privacy_tip_outlined,
+        //         title: translate('privacy_policy_title'),
+        //         subtitle: translate('privacy_policy_subtitle'),
+        //         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        //         onTap: () {},
+        //       ),
+        //       const Divider(height: 1, indent: 70),
+        //       _buildSettingTile(
+        //         icon: Icons.description_outlined,
+        //         title: translate('terms_of_service'),
+        //         subtitle: translate('read_terms'),
+        //         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        //         onTap: () {},
+        //       ),
+        //     ],
+        //   ),
+        // ),
+      ],
+    );
+  }
+
+  Widget _buildSubscriptionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          translate('subscription_section'),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2D323A),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [const Color(0xFF2E8B57), const Color(0xFF5CC96F)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2E8B57).withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: ElevatedButton(
+            onPressed: () async {
+              final subscriptionController = Get.put(SubscriptionController());
+              await subscriptionController.checkSubscriptionStatus();
+
+              if (subscriptionController.isSubscribed.value) {
+                // Show already subscribed popup
+                Get.dialog(
+                  Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF4CAF50).withOpacity(0.9),
+                            Color(0xFF2E7D32),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      padding: EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.white.withOpacity(0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.check_circle,
+                              size: 64,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 24),
+                          Text(
+                            translate('subscription_active_title'),
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            translate('subscription_already_active_message'),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white.withOpacity(0.95),
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 24),
+                          Container(
+                            padding: EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildActiveFeatureRow(
+                                  Icons.check_circle_outline,
+                                  translate('unlimited_claims'),
+                                ),
+                                SizedBox(height: 12),
+                                _buildActiveFeatureRow(
+                                  Icons.check_circle_outline,
+                                  translate('unlimited_listings'),
+                                ),
+                                SizedBox(height: 12),
+                                _buildActiveFeatureRow(
+                                  Icons.check_circle_outline,
+                                  translate('view_all_contacts'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 28),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Get.back(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Color(0xFF2E7D32),
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                translate('ok'),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  barrierDismissible: true,
+                );
+              } else {
+                // Navigate to payment
+                final paymentController = Get.put(PaymentController());
+                await paymentController.startPayment();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.workspace_premium, size: 24),
+                SizedBox(width: 12),
+                Text(
+                  translate('get_subscription'),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
         ),
       ],

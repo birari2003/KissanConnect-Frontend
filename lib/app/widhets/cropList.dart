@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui';
 import 'dart:convert';
 import '../widhets/subscriptionPopUp.dart';
-import '../widhets/complaint_popup.dart';
+import '../utils/api.dart';
 
 import '../services/farmerServices.dart';
 import '../services/translation_service.dart';
@@ -123,10 +123,7 @@ class CropListController extends GetxController {
 
           if (photos.isNotEmpty) {
             imageUrls = photos
-                .map(
-                  (photo) =>
-                      'http://192.168.43.43:5000/uploads/${photo['file_path']}',
-                )
+                .map((photo) => ApiConfig.getUploadUrl(photo['file_path']))
                 .cast<String>()
                 .toList();
           }
@@ -166,15 +163,18 @@ class CropListController extends GetxController {
     }
   }
 
-  void showCropDetail(CropModel crop) {
+  void showCropDetail(CropModel crop, int cropIndex) {
     Get.dialog(
-      CropDetailDialog(crop: crop, controller: this),
+      CropDetailDialog(crop: crop, controller: this, cropIndex: cropIndex),
       barrierDismissible: true,
     );
   }
 
-  void showContactInfo(CropModel crop) async {
-    if (hasSubscription.value) {
+  void showContactInfo(CropModel crop, int cropIndex) async {
+    // Allow contact info for first 3 crops (index 0-2) even without subscription
+    bool canViewContact = hasSubscription.value || cropIndex < 3;
+
+    if (canViewContact) {
       // Save farmer history to database
       try {
         await FarmerService().addFarmerHistory(
@@ -228,10 +228,12 @@ class CropListController extends GetxController {
                       Text(
                         crop.phone,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF2E8B57),
+                          color: Color(0xFF2D323A),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       SizedBox(width: 12),
                       InkWell(
@@ -403,9 +405,13 @@ class CropListWidget extends StatelessWidget {
                       !controller.hasSubscription.value && cropIndex >= 3;
 
                   if (isBlurred) {
-                    return _buildSimpleBlurredCropCard(crop, controller);
+                    return _buildSimpleBlurredCropCard(
+                      crop,
+                      controller,
+                      cropIndex,
+                    );
                   }
-                  return _buildCropCard(crop, controller);
+                  return _buildCropCard(crop, controller, cropIndex);
                 },
               );
             }),
@@ -415,71 +421,60 @@ class CropListWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCropCard(CropModel crop, CropListController controller) {
+  Widget _buildCropCard(
+    CropModel crop,
+    CropListController controller,
+    int cropIndex,
+  ) {
     return GestureDetector(
-      onTap: () => controller.showCropDetail(crop),
+      onTap: () => controller.showCropDetail(crop, cropIndex),
       child: Container(
+        margin: EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: Offset(0, 4),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
           ],
         ),
         child: Row(
           children: [
-            // Crop Image
-            ClipRRect(
-              borderRadius: BorderRadius.horizontal(left: Radius.circular(16)),
-              child: SizedBox(
-                width: 120,
-                height: 120,
-                child: crop.imageUrls.isNotEmpty
-                    ? Image.network(
-                        crop.imageUrls.first,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.grass,
-                              size: 50,
-                              color: Color(0xFF7BB53B),
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
-                          ),
+            // Crop Image with padding
+            Padding(
+              padding: EdgeInsets.all(6),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: SizedBox(
+                  width: 90,
+                  height: 90,
+                  child: crop.imageUrls.isNotEmpty
+                      ? Image.network(
+                          crop.imageUrls.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Image.asset(
+                              'assets/images/crop.jpg',
+                              fit: BoxFit.cover,
+                            );
+                          },
+                        )
+                      : Image.asset(
+                          'assets/images/crop.jpg',
+                          fit: BoxFit.cover,
                         ),
-                        child: Icon(
-                          Icons.grass,
-                          size: 50,
-                          color: Color(0xFF7BB53B),
-                        ),
-                      ),
+                ),
               ),
             ),
 
-            // Crop Info
+            // Crop Details
             Expanded(
               child: Padding(
-                padding: EdgeInsets.all(12),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -590,44 +585,45 @@ class CropListWidget extends StatelessWidget {
 
   Widget _buildSubscribeCard(CropListController controller) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      padding: EdgeInsets.all(24),
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF2E8B57), Color(0xFF5CC96F)],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Color(0xFF2E8B57).withOpacity(0.3),
-            blurRadius: 12,
-            offset: Offset(0, 6),
+            blurRadius: 8,
+            offset: Offset(0, 4),
           ),
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.lock, color: Colors.white, size: 40),
-          SizedBox(height: 16),
+          Icon(Icons.lock, color: Colors.white, size: 18),
+          SizedBox(height: 6),
           Text(
             translate('subscribe_to_see_more'),
             style: TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 2),
           Text(
             translate('free_limit_reached'),
             style: TextStyle(
               color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
+              fontSize: 11,
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 16),
+          SizedBox(height: 8),
           ElevatedButton(
             onPressed: () async {
               final paymentController = Get.put(PaymentController());
@@ -636,14 +632,14 @@ class CropListWidget extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: Color(0xFF2E8B57),
-              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 9),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
             child: Text(
               translate('subscribe_now'),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -654,10 +650,11 @@ class CropListWidget extends StatelessWidget {
   Widget _buildSimpleBlurredCropCard(
     CropModel crop,
     CropListController controller,
+    int cropIndex,
   ) {
     return Opacity(
       opacity: 0.4,
-      child: IgnorePointer(child: _buildCropCard(crop, controller)),
+      child: IgnorePointer(child: _buildCropCard(crop, controller, cropIndex)),
     );
   }
 }
@@ -665,11 +662,13 @@ class CropListWidget extends StatelessWidget {
 class CropDetailDialog extends StatefulWidget {
   final CropModel crop;
   final CropListController controller;
+  final int cropIndex;
 
   const CropDetailDialog({
     super.key,
     required this.crop,
     required this.controller,
+    required this.cropIndex,
   });
 
   @override
@@ -682,105 +681,81 @@ class _CropDetailDialogState extends State<CropDetailDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
-        constraints: BoxConstraints(maxWidth: 500, maxHeight: 600),
+        constraints: BoxConstraints(maxWidth: 500, maxHeight: 650),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Crop Image
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              child: SizedBox(
-                height: 250,
-                child: widget.crop.imageUrls.isNotEmpty
-                    ? Stack(
-                        children: [
-                          PageView.builder(
-                            itemCount: widget.crop.imageUrls.length,
-                            onPageChanged: (index) {
-                              setState(() {
-                                _currentImageIndex = index;
-                              });
-                            },
-                            itemBuilder: (context, index) {
-                              return Image.network(
-                                widget.crop.imageUrls[index],
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Color(0xFFE8F5E9),
-                                          Color(0xFFC8E6C9),
-                                        ],
-                                      ),
+            // Crop Image Gallery
+            Padding(
+              padding: EdgeInsets.all(12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  height: 180,
+                  child: widget.crop.imageUrls.isNotEmpty
+                      ? Stack(
+                          children: [
+                            PageView.builder(
+                              itemCount: widget.crop.imageUrls.length,
+                              onPageChanged: (index) {
+                                setState(() {
+                                  _currentImageIndex = index;
+                                });
+                              },
+                              itemBuilder: (context, index) {
+                                return Image.network(
+                                  widget.crop.imageUrls[index],
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'assets/images/crop.jpg',
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                            // Image Counter Indicator
+                            if (widget.crop.imageUrls.length > 1)
+                              Positioned(
+                                bottom: 16,
+                                right: 16,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.6),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${_currentImageIndex + 1}/${widget.crop.imageUrls.length}',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
-                                    child: Center(
-                                      child: Icon(
-                                        Icons.grass,
-                                        size: 80,
-                                        color: Color(0xFF7BB53B),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                          // Image Counter Indicator
-                          if (widget.crop.imageUrls.length > 1)
-                            Positioned(
-                              bottom: 16,
-                              right: 16,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.6),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '${_currentImageIndex + 1}/${widget.crop.imageUrls.length}',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      )
-                    : Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
-                          ),
+                          ],
+                        )
+                      : Image.asset(
+                          'assets/images/crop.jpg',
+                          fit: BoxFit.cover,
                         ),
-                        child: Center(
-                          child: Icon(
-                            Icons.grass,
-                            size: 80,
-                            color: Color(0xFF7BB53B),
-                          ),
-                        ),
-                      ),
+                ),
               ),
             ),
 
-            // Details
+            // Crop Details Section
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(20),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -836,67 +811,37 @@ class _CropDetailDialogState extends State<CropDetailDialog> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () =>
-                            widget.controller.showContactInfo(widget.crop),
-                        icon: Obx(
-                          () => Icon(
-                            widget.controller.hasSubscription.value
-                                ? Icons.phone
-                                : Icons.lock,
-                            size: 20,
-                          ),
+                        onPressed: () => widget.controller.showContactInfo(
+                          widget.crop,
+                          widget.cropIndex,
                         ),
-                        label: Obx(
-                          () => Text(
-                            widget.controller.hasSubscription.value
-                                ? translate(
-                                    'see_contact',
-                                  ) // Changed key or text
+                        icon: Obx(() {
+                          // Show phone icon if subscribed OR if it's one of the first 3 crops
+                          bool canView =
+                              widget.controller.hasSubscription.value ||
+                              widget.cropIndex < 3;
+                          return Icon(
+                            canView ? Icons.phone : Icons.lock,
+                            size: 20,
+                          );
+                        }),
+                        label: Obx(() {
+                          // Show appropriate text based on subscription and crop index
+                          bool canView =
+                              widget.controller.hasSubscription.value ||
+                              widget.cropIndex < 3;
+                          return Text(
+                            canView
+                                ? translate('get_contact_info')
                                 : translate('get_contact_info_premium'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
-                          ),
-                        ),
+                          );
+                        }),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF2E8B57),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(height: 12),
-
-                    // Complaint Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Get.dialog(
-                            CropComplaintPopup(
-                              cropId: widget.crop.cropId,
-                              sellerId: widget.crop.sellerId,
-                              cropName: widget.crop.name,
-                            ),
-                            barrierDismissible: true,
-                          );
-                        },
-                        icon: Icon(Icons.report_problem, size: 20),
-                        label: Text(
-                          translate('file_complaint'),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[700],
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(

@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/api.dart';
 
 class AdminService {
-  // Replace with your actual backend URL
-  final String baseUrl = 'http://192.168.43.43:5000/admin';
-  // final String baseUrl = 'https://kissanconnect-backend-z00d.onrender.com/admin';
+  // URL is now managed by ApiConfig
+  final String baseUrl = ApiConfig.adminBaseUrl;
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -495,6 +495,127 @@ class AdminService {
       }
     } catch (e) {
       throw Exception('Error creating job: $e');
+    }
+  }
+
+  // Update query (status and/or admin response)
+  Future<Map<String, dynamic>> updateQuery({
+    required int queryId,
+    String? status,
+    String? adminResponse,
+  }) async {
+    // Use farmer base URL since endpoint is /farmer/update-query
+    final farmerBaseUrl = baseUrl.replaceAll('/admin', '/farmer');
+    final url = Uri.parse('$farmerBaseUrl/update-query');
+
+    try {
+      final headers = await _getHeaders();
+      final body = <String, dynamic>{'query_id': queryId};
+
+      if (status != null) {
+        body['status'] = status;
+      }
+
+      if (adminResponse != null) {
+        body['admin_response'] = adminResponse;
+      }
+
+      print('updateQuery - Request body: $body');
+
+      final response = await http.put(
+        url,
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      print('updateQuery - Response status: ${response.statusCode}');
+      print('updateQuery - Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        print('updateQuery - Success!');
+        return data;
+      } else {
+        print('updateQuery - Failed: ${data['message']}');
+        throw Exception(data['message'] ?? 'Failed to update query');
+      }
+    } catch (e) {
+      print('updateQuery - Error: $e');
+      throw Exception('Error updating query: $e');
+    }
+  }
+
+  // Get all queries for admin review
+  Future<List<dynamic>> getQueries() async {
+    final url = Uri.parse('$baseUrl/get-queries');
+
+    try {
+      final headers = await _getHeaders();
+      print('Fetching queries from: $url');
+      final response = await http.get(url, headers: headers);
+
+      print('getQueries response status: ${response.statusCode}');
+      print('getQueries response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('Queries data: ${data['data']}');
+        return data['data'] ?? [];
+      } else {
+        throw Exception('Failed to fetch queries: ${response.body}');
+      }
+    } catch (e) {
+      print('Error fetching queries: $e');
+      throw Exception('Error fetching queries: $e');
+    }
+  }
+
+  // Add a new nursery
+  Future<Map<String, dynamic>> addNursery(
+    Map<String, dynamic> nurseryData,
+  ) async {
+    final url = Uri.parse('$baseUrl/add-nursery');
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: jsonEncode(nurseryData),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to add nursery');
+      }
+    } catch (e) {
+      throw Exception('Error adding nursery: $e');
+    }
+  }
+
+  // Bulk add nurseries
+  Future<Map<String, dynamic>> bulkAddNurseries(
+    List<Map<String, dynamic>> nurseries,
+  ) async {
+    final url = Uri.parse('$baseUrl/bulk-add-nurseries');
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: jsonEncode({'nurseries': nurseries}),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to bulk add nurseries');
+      }
+    } catch (e) {
+      throw Exception('Error bulk adding nurseries: $e');
     }
   }
 }

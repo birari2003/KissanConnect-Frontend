@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../../services/farmerServices.dart';
+import '../../../utils/api.dart';
 
 class HistoryItem {
   final String id;
@@ -70,11 +71,9 @@ class HistoryController extends GetxController {
             'https://via.placeholder.com/400x300?text=No+Image';
         if (crop['photos'] != null && (crop['photos'] as List).isNotEmpty) {
           final photo = crop['photos'][0];
-          cropImageUrl =
-              'http://192.168.43.43:5000/uploads/${photo['file_path']}';
+          cropImageUrl = ApiConfig.getUploadUrl(photo['file_path']);
         } else if (item['crop_image_path'] != null) {
-          cropImageUrl =
-              'http://192.168.43.43:5000/uploads/${item['crop_image_path']}';
+          cropImageUrl = ApiConfig.getUploadUrl(item['crop_image_path']);
         }
 
         // Parse timestamp

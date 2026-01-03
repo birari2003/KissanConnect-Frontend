@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/api.dart';
 
 class FarmerService {
-  // Replace with your actual backend URL
-  final String baseUrl = 'http://192.168.43.43:5000/farmer';
-  final String paymentUrl = 'http://192.168.43.43:5000/payment';
-  // final String baseUrl = 'https://kissanconnect-backend-z00d.onrender.com/farmer';
+  // URLs are now managed by ApiConfig
+  final String baseUrl = ApiConfig.farmerBaseUrl;
+  final String paymentUrl = ApiConfig.paymentBaseUrl;
 
   Future<Map<String, dynamic>> registerFarmerProfile(
     Map<String, dynamic> farmerData,
@@ -111,7 +111,7 @@ class FarmerService {
 
   // Submit a query from farmer to admin
   Future<Map<String, dynamic>> submitQuery(String query) async {
-    final url = Uri.parse('$baseUrl/submit-query');
+    final url = Uri.parse('$baseUrl/add-query');
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -127,7 +127,7 @@ class FarmerService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'query': query}),
+        body: jsonEncode({'description': query}),
       );
 
       final data = jsonDecode(response.body);
@@ -139,6 +139,70 @@ class FarmerService {
       }
     } catch (e) {
       throw Exception('Error submitting query: $e');
+    }
+  }
+
+  // Get all queries with user and responder details
+  Future<List<dynamic>> getQueries() async {
+    final url = Uri.parse('$baseUrl/get-queries');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data['data'] ?? [];
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch queries');
+      }
+    } catch (e) {
+      throw Exception('Error fetching queries: $e');
+    }
+  }
+
+  // Get queries submitted by the logged-in user
+  Future<List<dynamic>> getMyQueries() async {
+    final url = Uri.parse('$baseUrl/get-my-queries');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data['data'] ?? [];
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch my queries');
+      }
+    } catch (e) {
+      throw Exception('Error fetching my queries: $e');
     }
   }
 
@@ -465,6 +529,44 @@ class FarmerService {
     }
   }
 
+  // Search farmer by contact number
+  Future<Map<String, dynamic>?> searchFarmerByContact(String contact) async {
+    final url = Uri.parse('$baseUrl/search-farmer-by-contact?contact=$contact');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        // Backend returns nested structure: { data: { user: {...}, farmer_profile: {...} } }
+        // Extract the user object
+        if (data['data'] != null && data['data']['user'] != null) {
+          return data['data']['user'];
+        }
+        return null;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error searching farmer: $e');
+      return null;
+    }
+  }
+
   // Submit a crop complaint
   Future<Map<String, dynamic>> submitCropComplaint({
     required int againstUserId,
@@ -608,6 +710,338 @@ class FarmerService {
       }
     } catch (e) {
       throw Exception('Error fetching complaints: $e');
+    }
+  }
+
+  // Get my complaints
+  Future<List<dynamic>> getMyComplaints() async {
+    final url = Uri.parse('$baseUrl/get-my-complaints');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data['data'] ?? [];
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch complaints');
+      }
+    } catch (e) {
+      throw Exception('Error fetching complaints: $e');
+    }
+  }
+
+  // Update complaint status
+  Future<Map<String, dynamic>> updateComplaintStatus({
+    required int complaintId,
+    required String status,
+  }) async {
+    final url = Uri.parse('$baseUrl/update-complaint-status');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'complaint_id': complaintId, 'status': status}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to update complaint status');
+      }
+    } catch (e) {
+      throw Exception('Error updating complaint status: $e');
+    }
+  }
+
+  // Update crop claim
+  Future<Map<String, dynamic>> updateCropClaim({
+    required int claimId,
+    String? cropName,
+    String? claimDetails,
+    String? newEvidencePath,
+  }) async {
+    final url = Uri.parse('$baseUrl/update-claim/$claimId');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      var request = http.MultipartRequest('PUT', url);
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+
+      if (cropName != null) {
+        request.fields['crop_name'] = cropName;
+      }
+      if (claimDetails != null) {
+        request.fields['claim_details'] = claimDetails;
+      }
+
+      if (newEvidencePath != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('evidence', newEvidencePath),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to update crop claim');
+      }
+    } catch (e) {
+      throw Exception('Error updating crop claim: $e');
+    }
+  }
+
+  // Delete crop claim
+  Future<Map<String, dynamic>> deleteCropClaim(int claimId) async {
+    final url = Uri.parse('$baseUrl/delete-claim/$claimId');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to delete crop claim');
+      }
+    } catch (e) {
+      throw Exception('Error deleting crop claim: $e');
+    }
+  }
+
+  // Update crop listing
+  Future<Map<String, dynamic>> updateCrop({
+    required int cropId,
+    String? cropName,
+    String? quantity,
+    String? unit,
+    String? pricePerUnit,
+    List<String>? newPhotoPaths,
+  }) async {
+    final url = Uri.parse('$baseUrl/update-crop/$cropId');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      var request = http.MultipartRequest('PUT', url);
+      request.headers.addAll({'Authorization': 'Bearer $token'});
+
+      if (cropName != null) {
+        request.fields['crop_name'] = cropName;
+      }
+      if (quantity != null) {
+        request.fields['quantity'] = quantity;
+      }
+      if (unit != null) {
+        request.fields['unit'] = unit;
+      }
+      if (pricePerUnit != null) {
+        request.fields['price_per_unit'] = pricePerUnit;
+      }
+
+      if (newPhotoPaths != null && newPhotoPaths.isNotEmpty) {
+        for (var path in newPhotoPaths) {
+          request.files.add(await http.MultipartFile.fromPath('photos', path));
+        }
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to update crop');
+      }
+    } catch (e) {
+      throw Exception('Error updating crop: $e');
+    }
+  }
+
+  // Delete crop listing
+  Future<Map<String, dynamic>> deleteCrop(int cropId) async {
+    final url = Uri.parse('$baseUrl/delete-crop/$cropId');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to delete crop');
+      }
+    } catch (e) {
+      throw Exception('Error deleting crop: $e');
+    }
+  }
+
+  // Change password
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/change-password');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to change password');
+      }
+    } catch (e) {
+      throw Exception('Error changing password: $e');
+    }
+  }
+
+  // Update password (Forgot Password - No authentication required)
+  Future<Map<String, dynamic>> updatePassword({
+    required String email,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/update-password');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'new_password': newPassword}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to update password');
+      }
+    } catch (e) {
+      throw Exception('Error updating password: $e');
+    }
+  }
+
+  // Bulk add users
+  Future<Map<String, dynamic>> bulkAddUsers(
+    List<Map<String, dynamic>> users,
+  ) async {
+    final url = Uri.parse('$baseUrl/bulk-add-users');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'users': users}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else {
+        throw Exception(data['message'] ?? 'Failed to bulk add users');
+      }
+    } catch (e) {
+      throw Exception('Error bulk adding users: $e');
     }
   }
 }

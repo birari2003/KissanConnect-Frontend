@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import '../utils/ui_utils.dart';
 import '../services/farmerServices.dart';
 
@@ -31,8 +32,8 @@ class QueryPopupController extends GetxController {
     final status = await Permission.microphone.request();
     if (!status.isGranted) {
       UiUtils.showErrorSnackbar(
-        'Permission Denied',
-        'Microphone permission is required for voice input',
+        translate('permission_denied'),
+        translate('microphone_permission_required'),
       );
       return;
     }
@@ -46,8 +47,8 @@ class QueryPopupController extends GetxController {
       onError: (error) {
         isListening.value = false;
         UiUtils.showErrorSnackbar(
-          'Error',
-          'Voice recognition error: ${error.errorMsg}',
+          translate('voice_recognition_error'),
+          '${translate('voice_recognition_error')}: ${error.errorMsg}',
         );
       },
     );
@@ -64,7 +65,10 @@ class QueryPopupController extends GetxController {
         localeId: 'en_US',
       );
     } else {
-      UiUtils.showErrorSnackbar('Error', 'Speech recognition not available');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('speech_recognition_not_available'),
+      );
     }
   }
 
@@ -77,7 +81,19 @@ class QueryPopupController extends GetxController {
     final query = queryController.text.trim();
 
     if (query.isEmpty) {
-      UiUtils.showErrorSnackbar('Error', 'Please enter your query');
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('please_enter_query'),
+      );
+      return;
+    }
+
+    // Validate minimum length (backend requires at least 10 characters)
+    if (query.length < 10) {
+      UiUtils.showErrorSnackbar(
+        translate('error_title'),
+        translate('query_too_short'),
+      );
       return;
     }
 
@@ -87,16 +103,19 @@ class QueryPopupController extends GetxController {
       await _farmerService.submitQuery(query);
 
       UiUtils.showSuccessSnackbar(
-        'Success',
-        'Your query has been submitted. Admin will respond soon.',
+        translate('success'),
+        translate('query_submitted_success'),
       );
 
       queryController.clear();
+
+      // Wait a bit before closing so user can see the success message
+      await Future.delayed(Duration(milliseconds: 1500));
       Get.back(); // Close the popup
     } catch (e) {
       UiUtils.showErrorSnackbar(
-        'Error',
-        'Failed to submit query: ${e.toString().replaceAll('Exception: ', '')}',
+        translate('error_title'),
+        '${translate('failed_to_submit_query')}: ${e.toString().replaceAll('Exception: ', '')}',
       );
     } finally {
       isSubmitting.value = false;
@@ -160,7 +179,7 @@ class QueryPopup extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Ask Your Query',
+                          translate('ask_your_query'),
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -169,7 +188,7 @@ class QueryPopup extends StatelessWidget {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Type or speak your question',
+                          translate('type_or_speak_question'),
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 13,
@@ -205,7 +224,7 @@ class QueryPopup extends StatelessWidget {
                           controller: controller.queryController,
                           maxLines: 5,
                           decoration: InputDecoration(
-                            hintText: 'Enter your question or issue here...',
+                            hintText: translate('enter_query_hint'),
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.all(16),
                             hintStyle: TextStyle(color: Colors.grey[500]),
@@ -227,7 +246,7 @@ class QueryPopup extends StatelessWidget {
                                           ),
                                           SizedBox(width: 4),
                                           Text(
-                                            'Listening...',
+                                            translate('listening'),
                                             style: TextStyle(
                                               color: Colors.red,
                                               fontSize: 12,
@@ -237,7 +256,7 @@ class QueryPopup extends StatelessWidget {
                                         ],
                                       )
                                     : Text(
-                                        'Tap mic to speak',
+                                        translate('tap_mic_to_speak'),
                                         style: TextStyle(
                                           color: Colors.grey[600],
                                           fontSize: 12,
@@ -303,8 +322,8 @@ class QueryPopup extends StatelessWidget {
                             : Icon(Icons.send, size: 20),
                         label: Text(
                           controller.isSubmitting.value
-                              ? 'Submitting...'
-                              : 'Submit Query',
+                              ? translate('submitting_query')
+                              : translate('submit_query'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

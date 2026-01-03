@@ -16,6 +16,10 @@ import '../../../widhets/createJobApplication.dart';
 import '../../../widhets/global_chatbot_widget.dart';
 import '../../history/views/history_view.dart';
 import '../../history/controllers/history_controller.dart';
+import './bulk_add_farmers_view.dart';
+import '../controllers/bulk_add_farmers_controller.dart';
+import './nursery_management_view.dart';
+import '../controllers/nursery_management_controller.dart';
 
 class AdminpanelView extends GetView<AdminpanelController> {
   const AdminpanelView({super.key});
@@ -181,9 +185,21 @@ class AdminpanelView extends GetView<AdminpanelController> {
                     ),
                     _buildNavItem(
                       icon: Icons.report_problem_rounded,
-                      title: 'Complaints',
+                      title: 'Complaints & Queries',
                       index: 10,
                       isSelected: controller.selectedIndex.value == 10,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.group_add_rounded,
+                      title: 'Bulk Add Farmers',
+                      index: 11,
+                      isSelected: controller.selectedIndex.value == 11,
+                    ),
+                    _buildNavItem(
+                      icon: Icons.store_rounded,
+                      title: 'Nursery Management',
+                      index: 12,
+                      isSelected: controller.selectedIndex.value == 12,
                     ),
                     _buildNavItem(
                       icon: Icons.settings_rounded,
@@ -370,9 +386,25 @@ class AdminpanelView extends GetView<AdminpanelController> {
         case 10:
           return _buildPageWithHeader(
             context,
-            'Complaints Received',
+            'Complaints & Queries',
             Icons.report_problem_rounded,
             const ComplaintReceived(),
+          );
+        case 11:
+          _ensureBulkAddFarmersControllerInjected();
+          return _buildPageWithHeader(
+            context,
+            'Bulk Add Farmers',
+            Icons.group_add_rounded,
+            const BulkAddFarmersView(),
+          );
+        case 12:
+          _ensureNurseryManagementControllerInjected();
+          return _buildPageWithHeader(
+            context,
+            'Nursery Management',
+            Icons.store_rounded,
+            const NurseryManagementView(),
           );
         default:
           return _buildDashboard(context);
@@ -395,6 +427,18 @@ class AdminpanelView extends GetView<AdminpanelController> {
   void _ensureHistoryControllerInjected() {
     if (!Get.isRegistered<HistoryController>()) {
       Get.put(HistoryController());
+    }
+  }
+
+  void _ensureBulkAddFarmersControllerInjected() {
+    if (!Get.isRegistered<BulkAddFarmersController>()) {
+      Get.put(BulkAddFarmersController());
+    }
+  }
+
+  void _ensureNurseryManagementControllerInjected() {
+    if (!Get.isRegistered<NurseryManagementController>()) {
+      Get.put(NurseryManagementController());
     }
   }
 
@@ -1277,162 +1321,160 @@ class AdminpanelView extends GetView<AdminpanelController> {
           _buildAdminProfileCard(),
           SizedBox(height: 24),
 
-          // System Settings
-          _buildSettingsGroup(
-            title: 'System Settings',
-            items: [
-              _buildSettingItem(
-                icon: Icons.notifications_outlined,
-                title: 'Notifications',
-                subtitle: 'Manage notification preferences',
-                trailing: Switch(
-                  value: true,
-                  onChanged: (value) {},
-                  activeColor: Color(0xFF2E7D32),
+          // Preferences Section
+          Text(
+            'Preferences',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E7D32),
+            ),
+          ),
+          SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: Offset(0, 2),
                 ),
-              ),
-              _buildSettingItem(
-                icon: Icons.security_outlined,
-                title: 'Security',
-                subtitle: 'Two-factor authentication',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
+              ],
+            ),
+            child: Column(
+              children: [
+                // _buildSettingTile(
+                //   icon: Icons.notifications_outlined,
+                //   title: 'Push Notifications',
+                //   subtitle: 'Receive updates on new queries',
+                //   trailing: Switch(
+                //     value: true,
+                //     onChanged: (value) {},
+                //     activeColor: Color(0xFF2E7D32),
+                //   ),
+                // ),
+                Divider(height: 1, indent: 70),
+                _buildSettingTile(
+                  icon: Icons.email_outlined,
+                  title: 'Email Notifications',
+                  subtitle: 'Get email alerts for complaints',
+                  trailing: Switch(
+                    value: true,
+                    onChanged: (value) {},
+                    activeColor: Color(0xFF2E7D32),
+                  ),
                 ),
-                onTap: () {},
-              ),
-              _buildSettingItem(
-                icon: Icons.backup_outlined,
-                title: 'Backup & Restore',
-                subtitle: 'Manage data backups',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
-                ),
-                onTap: () {},
-              ),
-            ],
+              ],
+            ),
           ),
           SizedBox(height: 24),
 
-          // Admin Management
-          _buildSettingsGroup(
-            title: 'Admin Management',
-            items: [
-              _buildSettingItem(
-                icon: Icons.admin_panel_settings_outlined,
-                title: 'Admin Roles',
-                subtitle: 'Manage admin permissions',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
+          // App Information Section
+          Text(
+            'App Information',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E7D32),
+            ),
+          ),
+          SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: Offset(0, 2),
                 ),
-                onTap: () {},
-              ),
-              _buildSettingItem(
-                icon: Icons.history_outlined,
-                title: 'Activity Log',
-                subtitle: 'View admin activity history',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildSettingTile(
+                  icon: Icons.info_outline,
+                  title: 'App Version',
+                  subtitle: 'Version 1.0.0',
+                  trailing: SizedBox.shrink(),
                 ),
-                onTap: () {},
-              ),
-              _buildSettingItem(
-                icon: Icons.people_outline,
-                title: 'User Management',
-                subtitle: 'Manage user accounts',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
+                Divider(height: 1, indent: 70),
+                _buildSettingTile(
+                  icon: Icons.update_outlined,
+                  title: 'Last Updated',
+                  subtitle: 'December 2025',
+                  trailing: SizedBox.shrink(),
                 ),
-                onTap: () {},
-              ),
-            ],
+              ],
+            ),
           ),
           SizedBox(height: 24),
 
-          // Application Settings
-          _buildSettingsGroup(
-            title: 'Application',
-            items: [
-              _buildSettingItem(
-                icon: Icons.language_outlined,
-                title: 'Language',
-                subtitle: 'English',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
-                ),
-                onTap: () {},
-              ),
-              _buildSettingItem(
-                icon: Icons.palette_outlined,
-                title: 'Theme',
-                subtitle: 'Light mode',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
-                ),
-                onTap: () {},
-              ),
-              _buildSettingItem(
-                icon: Icons.storage_outlined,
-                title: 'Storage',
-                subtitle: '2.5 GB used',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
-                ),
-                onTap: () {},
-              ),
-            ],
-          ),
-          SizedBox(height: 24),
-
-          // About Section
-          _buildSettingsGroup(
-            title: 'About',
-            items: [
-              _buildSettingItem(
-                icon: Icons.info_outline,
-                title: 'App Version',
-                subtitle: 'Version 1.0.0',
-                trailing: SizedBox.shrink(),
-              ),
-              _buildSettingItem(
-                icon: Icons.description_outlined,
-                title: 'Terms & Conditions',
-                subtitle: 'Read terms of service',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
-                ),
-                onTap: () {},
-              ),
-              _buildSettingItem(
-                icon: Icons.privacy_tip_outlined,
-                title: 'Privacy Policy',
-                subtitle: 'Read privacy policy',
-                trailing: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
-                ),
-                onTap: () {},
-              ),
-            ],
-          ),
+          // Help & Support Section
+          // Text(
+          //   'Help & Support',
+          //   style: TextStyle(
+          //     fontSize: 18,
+          //     fontWeight: FontWeight.bold,
+          //     color: Color(0xFF2E7D32),
+          //   ),
+          // ),
+          // SizedBox(height: 12),
+          // Container(
+          //   decoration: BoxDecoration(
+          //     color: Colors.white,
+          //     borderRadius: BorderRadius.circular(16),
+          //     boxShadow: [
+          //       BoxShadow(
+          //         color: Colors.black.withOpacity(0.05),
+          //         blurRadius: 10,
+          //         offset: Offset(0, 2),
+          //       ),
+          //     ],
+          //   ),
+          //   child: Column(
+          //     children: [
+          //       _buildSettingTile(
+          //         icon: Icons.help_outline,
+          //         title: 'Help Center',
+          //         subtitle: 'Get help and support',
+          //         trailing: Icon(
+          //           Icons.arrow_forward_ios,
+          //           size: 16,
+          //           color: Colors.grey,
+          //         ),
+          //         onTap: () {},
+          //       ),
+          //       Divider(height: 1, indent: 70),
+          //       _buildSettingTile(
+          //         icon: Icons.privacy_tip_outlined,
+          //         title: 'Privacy Policy',
+          //         subtitle: 'Read our privacy policy',
+          //         trailing: Icon(
+          //           Icons.arrow_forward_ios,
+          //           size: 16,
+          //           color: Colors.grey,
+          //         ),
+          //         onTap: () {},
+          //       ),
+          //       Divider(height: 1, indent: 70),
+          //       _buildSettingTile(
+          //         icon: Icons.description_outlined,
+          //         title: 'Terms of Service',
+          //         subtitle: 'Read terms and conditions',
+          //         trailing: Icon(
+          //           Icons.arrow_forward_ios,
+          //           size: 16,
+          //           color: Colors.grey,
+          //         ),
+          //         onTap: () {},
+          //       ),
+          //     ],
+          //   ),
+          // ),
           SizedBox(height: 24),
 
           // Logout Button
@@ -1443,102 +1485,7 @@ class AdminpanelView extends GetView<AdminpanelController> {
     );
   }
 
-  Widget _buildAdminProfileCard() {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.admin_panel_settings,
-              color: Colors.white,
-              size: 35,
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Admin User',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E7D32),
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'admin@kissanconnect.com',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.edit, color: Color(0xFF2E7D32)),
-            onPressed: () {},
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsGroup({
-    required String title,
-    required List<Widget> items,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2E7D32),
-          ),
-        ),
-        SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(children: items),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingItem({
+  Widget _buildSettingTile({
     required IconData icon,
     required String title,
     required String subtitle,
@@ -1587,6 +1534,71 @@ class AdminpanelView extends GetView<AdminpanelController> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAdminProfileCard() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.admin_panel_settings,
+              color: Colors.white,
+              size: 35,
+            ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Obx(
+                  () => Text(
+                    controller.userName.value.isEmpty
+                        ? 'Admin User'
+                        : controller.userName.value,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2E7D32),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Obx(
+                  () => Text(
+                    controller.userEmail.value.isEmpty
+                        ? 'admin@kissanconnect.com'
+                        : controller.userEmail.value,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

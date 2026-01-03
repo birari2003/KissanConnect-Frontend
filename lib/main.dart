@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import "package:flutter_localizations/flutter_localizations.dart";
 import 'app/routes/app_pages.dart';
+import 'app/utils/api.dart';
 
 import 'app/widhets/global_chatbot_widget.dart';
 import 'app/controllers/global_chatbot_controller.dart';
@@ -13,6 +14,8 @@ void main() async {
 
   // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
+
+  ApiConfig.initialize('local'); // Change this to 'local' or 'production'
 
   var delegate = await LocalizationDelegate.create(
     fallbackLocale: 'en',

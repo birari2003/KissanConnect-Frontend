@@ -229,9 +229,22 @@ class LoginsignupController extends GetxController {
       isLoading.value = true;
 
       try {
+        // Get current language preference
+        String currentLanguage = 'en'; // Default
+        try {
+          if (Get.context != null) {
+            final locale = LocalizedApp.of(Get.context!).delegate.currentLocale;
+            currentLanguage =
+                locale.languageCode; // This will be 'en', 'hi', or 'mr'
+          }
+        } catch (e) {
+          print('Error getting current language: $e');
+        }
+
         final response = await _authService.loginUser(
           phone: loginPhoneController.text,
           password: loginPasswordController.text,
+          languagePreference: currentLanguage,
         );
 
         // Save session
